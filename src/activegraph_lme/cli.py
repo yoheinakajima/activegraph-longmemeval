@@ -76,6 +76,7 @@ def main() -> None:
 @click.option("--smoke", is_flag=True, help="Use the frozen 50-question subset.")
 @click.option("--limit", type=int, default=None, help="Cap to first N (debug only).")
 @click.option("--run-id", type=str, default=None, help="Override run id (default: timestamp).")
+@click.option("--resume", is_flag=True, help="Resume an interrupted run, skipping already-answered questions.")
 @click.option(
     "--require-authoritative-tokens/--allow-charfallback",
     "require_auth_tokens",
@@ -93,6 +94,7 @@ def run_cmd(
     smoke: bool,
     limit: int | None,
     run_id: str | None,
+    resume: bool,
     require_auth_tokens: bool | None,
 ) -> None:
     cfg = load_config(config_path)
@@ -138,6 +140,34 @@ def run_cmd(
     run_dir = Path(cfg.output_dir) / f"{rid}__{system_name}__{dataset_key}__{tag}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
+    hyp_path = run_dir / "hypotheses.jsonl"
+    manifest_path = run_dir / "manifest.json"
+
+    # --- Resume: load already-completed answers and carry over their manifest queries ---
+    done_ids: set[str] = set()
+    prior_queries: list[QueryRecord] = []
+    prior_resolved_model: str = ""
+    prior_n_truncated: int = 0
+    prior_started_at: str = ""
+
+    if resume and hyp_path.exists():
+        with open(hyp_path) as _hf:
+            for _line in _hf:
+                _line = _line.strip()
+                if _line:
+                    done_ids.add(json.loads(_line)["question_id"])
+        if manifest_path.exists():
+            _m = json.loads(manifest_path.read_text())
+            prior_queries = [QueryRecord(**q) for q in _m.get("queries", [])]
+            prior_resolved_model = _m.get("reader_model_resolved", "")
+            prior_n_truncated = _m.get("n_truncated", 0)
+            prior_started_at = _m.get("started_at", "")
+        log.info("Resuming run: %d questions already done, %d remaining.",
+                 len(done_ids), len(instances) - len(done_ids))
+        instances = [i for i in instances if i.question_id not in done_ids]
+
+    total_questions = len(done_ids) + len(instances)
+
     manifest = Manifest(
         run_id=run_dir.name,
         system=system_name,
@@ -147,14 +177,16 @@ def run_cmd(
         repo_sha=repo_sha(),
         submodule_sha=submodule_sha(),
         reader_model_requested=cfg.reader.model,
-        reader_model_resolved="",  # filled by first API response
+        reader_model_resolved=prior_resolved_model,
         judge_short_name=cfg.judge.short_name,
         judge_resolved_model=cfg.judge.resolved_model,
         seed=cfg.seed,
-        started_at=datetime.now(timezone.utc).isoformat(),
-        n_questions=len(instances),
+        started_at=prior_started_at or datetime.now(timezone.utc).isoformat(),
+        n_questions=total_questions,
+        n_truncated=prior_n_truncated,
         context_token_source=ctx_src,
         require_authoritative_tokens=require_auth_tokens,
+        queries=prior_queries,
     )
     if system_name == "activegraph":
         manifest.notes.append(
@@ -162,9 +194,9 @@ def run_cmd(
             "internals plug into the same ingest/retrieve interface."
         )
 
-    hyp_path = run_dir / "hypotheses.jsonl"
+    hyp_open_mode = "a" if resume and done_ids else "w"
     t0 = time.monotonic()
-    with open(hyp_path, "w") as hyp_f:
+    with open(hyp_path, hyp_open_mode) as hyp_f:
         for idx, inst in enumerate(tqdm(instances, desc=f"{system_name}:{dataset_key}")):
             t_inst = time.monotonic()
             state = system.ingest(inst)

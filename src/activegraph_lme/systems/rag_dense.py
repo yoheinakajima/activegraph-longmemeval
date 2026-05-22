@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 from typing import Literal
 
+import httpx
 import numpy as np
 from openai import OpenAI
 
@@ -30,13 +31,23 @@ _client: OpenAI | None = None
 def _get_client() -> OpenAI:
     global _client
     if _client is None:
-        _client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        # Pass an explicit httpx.Client to avoid the `proxies` kwarg clash
+        # between openai==1.54 and httpx>=0.28 in this environment.
+        _client = OpenAI(
+            api_key=os.environ["OPENAI_API_KEY"],
+            http_client=httpx.Client(),
+        )
     return _client
+
+
+_MAX_CHARS = 30_000  # ~7500 tokens; stays under the 8192-token API limit
 
 
 def _embed_batch(model: str, texts: list[str]) -> np.ndarray:
     if not texts:
         return np.zeros((0, 1536), dtype=np.float32)
+    # Truncate long texts to avoid the 8192-token per-input API limit.
+    texts = [t[:_MAX_CHARS] if len(t) > _MAX_CHARS else t for t in texts]
     # OpenAI batches up to a generous size; we keep it modest for memory.
     out = []
     B = 96
