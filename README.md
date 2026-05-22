@@ -64,17 +64,31 @@ Subsequent runs verify and fail loudly on mismatch.
 make run SYSTEM=rag-bm25 DATA=s            # writes runs/<run_id>/
 make eval RUN=runs/<run_id>                # invokes the frozen upstream judge
 
-# full smoke matrix (5 systems × {oracle, s}, RAG also × {turn, session})
-make reproduce        # uses config/smoke_ids.txt — 50 stratified questions
+# offline property tests for the four baselines (no API)
+make tests
 
-# paper run
-make reproduce-full   # every question in each dataset
+# probe the resolved reader model snapshot (one-shot, needs ANTHROPIC_API_KEY)
+make check-resolved-model
+
+# four baselines only (skip the activegraph stub), smoke-50, RAG × {turn, session}
+make baselines-smoke   # needs ANTHROPIC_API_KEY + OPENAI_API_KEY
+
+# full 5-system matrix
+make reproduce         # smoke = 50 frozen IDs from config/smoke_ids.txt
+make reproduce-full    # every question in each dataset
 ```
 
-`make reproduce` is the unit a reviewer re-runs. It writes a per-cell
-`runs/<run_id>/` containing `hypotheses.jsonl`, `manifest.json`,
-`scores.json`, and the upstream `eval.log`, then rebuilds
-`paper/results_tables.md` with accuracy + mean tokens/query per cell.
+`make reproduce` is the unit a reviewer re-runs by default (smoke, 50
+questions). `make reproduce-full` runs all ~500 per dataset and enforces
+`--require-authoritative-tokens` (the run fails if `context_tokens`
+would be recorded with the char/4 fallback). Each cell writes
+`runs/<run_id>/` with `hypotheses.jsonl`, `manifest.json`,
+`scores.json`, and the upstream `eval.log`, then `paper/results_tables.md`
+is regenerated with accuracy + mean tokens/query per cell.
+
+`paper/BASELINE_SANITY.md` lists the expected qualitative orderings
+across baselines; check it after every matrix run to catch silently
+broken systems before ActiveGraph enters.
 
 ## Reproducibility hooks
 
@@ -85,7 +99,12 @@ make reproduce-full   # every question in each dataset
 - Per-run `manifest.json` captures: repo SHA, submodule SHA, dataset SHA-256,
   reader model **requested + resolved**, judge short name + resolved model, full
   config, seed, started/finished timestamps, wall-clock, per-question
-  `{prompt_tokens, completion_tokens, context_tokens, truncated, elapsed_s}`.
+  `{prompt_tokens, completion_tokens, context_tokens, truncated, elapsed_s}`,
+  and the run-level `context_token_source` ∈ {`tiktoken`, `charfallback`}.
+- tiktoken downloads its BPE on first use into the project-local
+  `.tiktoken_cache/` (set automatically). Network access is required ONCE;
+  after that all runs (including subprocess children) are offline-friendly.
+  Paper runs assert `context_token_source == "tiktoken"` and fail otherwise.
 
 ## Notes for retrieval-recall extensions (future)
 

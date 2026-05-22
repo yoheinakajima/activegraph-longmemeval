@@ -51,6 +51,11 @@ class Manifest:
     wall_clock_s: float = 0.0
     n_questions: int = 0
     n_truncated: int = 0
+    # Authoritative for prompt/completion (always "api" — reader.usage); for
+    # context_tokens it is "tiktoken" or "charfallback".
+    prompt_completion_token_source: str = "api"
+    context_token_source: str = ""        # filled at run start; never empty in a valid run
+    require_authoritative_tokens: bool = True
     queries: list[QueryRecord] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
@@ -74,6 +79,9 @@ class Manifest:
             "wall_clock_s": self.wall_clock_s,
             "n_questions": self.n_questions,
             "n_truncated": self.n_truncated,
+            "prompt_completion_token_source": self.prompt_completion_token_source,
+            "context_token_source": self.context_token_source,
+            "require_authoritative_tokens": self.require_authoritative_tokens,
             "queries": [q.__dict__ for q in self.queries],
             "notes": self.notes,
         }

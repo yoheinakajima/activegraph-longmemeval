@@ -1,4 +1,4 @@
-.PHONY: setup data smoke-ids run eval reproduce reproduce-full lint clean
+.PHONY: setup data smoke-ids run eval reproduce reproduce-full tests baselines-smoke check-resolved-model lint clean
 
 PY ?= uv run python
 
@@ -29,6 +29,21 @@ reproduce:
 
 reproduce-full:
 	$(PY) scripts/run_matrix.py --full
+
+# Offline property tests (no API). CI-friendly.
+tests:
+	$(PY) scripts/property_tests.py
+
+# Resolved-model probe; requires ANTHROPIC_API_KEY.
+check-resolved-model:
+	$(PY) scripts/check_resolved_model.py
+
+# Live-API smoke: the four baselines (oracle, full-context-s, rag-bm25, rag-dense)
+# on the frozen 50-question subset. RAG runs at both turn and session granularity.
+# ActiveGraph is intentionally skipped this round (it remains a stub).
+# Requires: ANTHROPIC_API_KEY (reader) and OPENAI_API_KEY (judge + dense embeddings).
+baselines-smoke:
+	$(PY) scripts/run_matrix.py --baselines-only
 
 clean:
 	rm -rf .ruff_cache .mypy_cache .pytest_cache **/__pycache__

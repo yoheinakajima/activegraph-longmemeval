@@ -21,6 +21,20 @@ SRC = Path("data/longmemeval_s_cleaned.json")
 DST = Path("config/smoke_ids.txt")
 
 
+# The six canonical question_types defined by upstream LongMemEval. Each must
+# appear at least once in the smoke subset, and the subset must contain at
+# least one `_abs` (abstention) instance — otherwise the smoke run silently
+# fails to exercise abstention behavior.
+REQUIRED_TYPES = {
+    "single-session-user",
+    "single-session-assistant",
+    "single-session-preference",
+    "multi-session",
+    "temporal-reasoning",
+    "knowledge-update",
+}
+
+
 def main() -> int:
     if not SRC.exists():
         print(f"error: {SRC} missing. Run `make data` first.", file=sys.stderr)
@@ -28,30 +42,61 @@ def main() -> int:
 
     data = json.loads(SRC.read_text())
 
-    # Group by question_type (keeping _abs grouped with its base type per upstream).
-    by_type: dict[str, list[str]] = defaultdict(list)
-    for entry in data:
-        qtype = entry["question_type"]
-        by_type[qtype].append(entry["question_id"])
+    # Stratify by (question_type, is_abs). Each non-empty stratum gets at
+    # least one slot so abstention is guaranteed to be exercised AND every
+    # base question_type appears.
+    def _stratum(entry: dict) -> tuple[str, bool]:
+        return (entry["question_type"], "_abs" in entry["question_id"])
 
-    types = sorted(by_type.keys())
+    by_stratum: dict[tuple[str, bool], list[str]] = defaultdict(list)
+    for entry in data:
+        by_stratum[_stratum(entry)].append(entry["question_id"])
+
+    strata = sorted(by_stratum.keys())
     rng = random.Random(SEED)
 
-    # Largest-remainder allocation across types so the counts sum to N_TOTAL.
-    raw = {t: N_TOTAL * len(by_type[t]) / sum(len(v) for v in by_type.values()) for t in types}
-    floor = {t: int(raw[t]) for t in types}
+    total = sum(len(v) for v in by_stratum.values())
+    raw = {s: N_TOTAL * len(by_stratum[s]) / total for s in strata}
+    floor = {s: max(1, int(raw[s])) for s in strata}
+    if sum(floor.values()) > N_TOTAL:
+        print(
+            f"error: per-stratum floor of 1 already exceeds N_TOTAL={N_TOTAL} "
+            f"across {len(strata)} strata. Increase N_TOTAL or check the data.",
+            file=sys.stderr,
+        )
+        return 3
     remainder = N_TOTAL - sum(floor.values())
-    # Distribute the remainder by fractional part (desc), tie-break alphabetical.
-    order = sorted(types, key=lambda t: (-(raw[t] - floor[t]), t))
+    order = sorted(strata, key=lambda s: (-(raw[s] - floor[s]), s))
     quota = dict(floor)
-    for t in order[:remainder]:
-        quota[t] += 1
+    for s in order[:remainder]:
+        if quota[s] < len(by_stratum[s]):
+            quota[s] += 1
 
     selected: list[str] = []
-    for t in types:
-        pool = sorted(by_type[t])  # deterministic order before shuffling
+    for s in strata:
+        pool = sorted(by_stratum[s])
         rng.shuffle(pool)
-        selected.extend(pool[: quota[t]])
+        selected.extend(pool[: quota[s]])
+
+    qid2type = {e["question_id"]: e["question_type"] for e in data}
+    by_picked: dict[str, int] = defaultdict(int)
+    for q in selected:
+        by_picked[qid2type[q]] += 1
+    n_abs = sum(1 for q in selected if "_abs" in q)
+
+    # Verification gates — refuse to write a degenerate subset.
+    missing = REQUIRED_TYPES - set(by_picked.keys())
+    if missing:
+        print(f"error: smoke subset missing required question_types: {sorted(missing)}",
+              file=sys.stderr)
+        return 4
+    if n_abs == 0:
+        print(
+            "error: smoke subset contains zero `_abs` (abstention) instances; "
+            "stratifier is degenerate.",
+            file=sys.stderr,
+        )
+        return 5
 
     selected.sort()
     header = [
@@ -64,12 +109,9 @@ def main() -> int:
     DST.write_text("\n".join(header + selected) + "\n")
 
     print(f"wrote {DST} with {len(selected)} question_ids")
-    by_picked: dict[str, int] = defaultdict(int)
-    qid2type = {e["question_id"]: e["question_type"] for e in data}
-    for q in selected:
-        by_picked[qid2type[q]] += 1
     for t in sorted(by_picked):
         print(f"  {t}: {by_picked[t]}")
+    print(f"  (_abs instances within: {n_abs})")
     return 0
 
 

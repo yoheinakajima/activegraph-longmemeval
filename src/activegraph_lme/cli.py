@@ -18,7 +18,7 @@ from .eval.run_judge import run_judge
 from .manifest import Manifest, QueryRecord, repo_sha, submodule_sha
 from .reader import AnthropicReader
 from .systems import build_system
-from .tokens import count_tokens as _tok_count
+from .tokens import count_tokens as _tok_count, token_source
 
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
@@ -76,6 +76,16 @@ def main() -> None:
 @click.option("--smoke", is_flag=True, help="Use the frozen 50-question subset.")
 @click.option("--limit", type=int, default=None, help="Cap to first N (debug only).")
 @click.option("--run-id", type=str, default=None, help="Override run id (default: timestamp).")
+@click.option(
+    "--require-authoritative-tokens/--allow-charfallback",
+    "require_auth_tokens",
+    default=None,
+    help=(
+        "If set, fail the run when context_tokens would be recorded with the "
+        "char/4 fallback instead of tiktoken. Default: on for full runs, "
+        "off (warn-only) for --smoke."
+    ),
+)
 def run_cmd(
     system_name: str,
     dataset_key: str,
@@ -83,6 +93,7 @@ def run_cmd(
     smoke: bool,
     limit: int | None,
     run_id: str | None,
+    require_auth_tokens: bool | None,
 ) -> None:
     cfg = load_config(config_path)
     dataset_path = Path(cfg.datasets[dataset_key])
@@ -96,6 +107,24 @@ def run_cmd(
         instances = _filter_smoke(instances, Path("config/smoke_ids.txt"))
     if limit is not None:
         instances = instances[:limit]
+
+    # Resolve the token-counting source up front so the gate fires before we
+    # spend any API budget.
+    ctx_src = token_source()
+    if require_auth_tokens is None:
+        require_auth_tokens = not smoke  # default: ON for full, OFF (warn) for smoke
+    if ctx_src != "tiktoken":
+        msg = (
+            f"context_token_source resolved to {ctx_src!r}; tiktoken did not "
+            f"load. Authoritative reader (prompt/completion) tokens are still "
+            f"recorded from the API, but the cross-system context yardstick is "
+            f"approximated (char/4). To fix permanently, run any single command "
+            f"with network so tiktoken populates $TIKTOKEN_CACHE_DIR "
+            f"({os.environ.get('TIKTOKEN_CACHE_DIR')!r})."
+        )
+        if require_auth_tokens:
+            raise click.ClickException(msg + " Failing per --require-authoritative-tokens.")
+        log.warning(msg)
 
     reader = AnthropicReader(
         model=cfg.reader.model,
@@ -124,6 +153,8 @@ def run_cmd(
         seed=cfg.seed,
         started_at=datetime.now(timezone.utc).isoformat(),
         n_questions=len(instances),
+        context_token_source=ctx_src,
+        require_authoritative_tokens=require_auth_tokens,
     )
     if system_name == "activegraph":
         manifest.notes.append(

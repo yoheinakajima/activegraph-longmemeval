@@ -50,11 +50,22 @@ def with_granularity(granularity: str) -> Path:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--full", action="store_true", help="Run every question (default: smoke 50).")
+    ap.add_argument(
+        "--baselines-only",
+        action="store_true",
+        help="Skip the activegraph stub; run only the four real baselines.",
+    )
     args = ap.parse_args()
-    mode_flag = [] if args.full else ["--smoke"]
+    mode_flag = (
+        ["--require-authoritative-tokens"]
+        if args.full
+        else ["--smoke", "--allow-charfallback"]
+    )
 
     cfg = yaml.safe_load(CONFIG.read_text())
-    systems = cfg["systems"]
+    systems = list(cfg["systems"])
+    if args.baselines_only:
+        systems = [s for s in systems if s != "activegraph"]
     datasets = list(cfg["datasets"].keys())  # ['oracle', 's']
 
     matrix_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
