@@ -245,6 +245,7 @@ def run_cmd(
                 )
                 + "\n"
             )
+            hyp_f.flush()
 
     manifest.finished_at = datetime.now(timezone.utc).isoformat()
     manifest.wall_clock_s = round(time.monotonic() - t0, 3)
