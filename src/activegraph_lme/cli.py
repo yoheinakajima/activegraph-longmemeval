@@ -156,10 +156,12 @@ def run_cmd(
         context_token_source=ctx_src,
         require_authoritative_tokens=require_auth_tokens,
     )
-    if system_name == "activegraph":
+    if system_name.startswith("activegraph-det-"):
+        signal = system_name.removeprefix("activegraph-det-")
         manifest.notes.append(
-            "ActiveGraphSystem is a STUB (recency-with-budget). Round-two real "
-            "internals plug into the same ingest/retrieve interface."
+            f"ActiveGraph deterministic Mode A; retrieval_signal={signal}. "
+            f"No LLM extraction at ingest. Token budget mirrors the turn-level "
+            f"RAG baselines so accuracy comparisons aren't confounded by context size."
         )
 
     hyp_path = run_dir / "hypotheses.jsonl"

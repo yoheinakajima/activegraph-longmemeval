@@ -53,7 +53,12 @@ def main() -> int:
     ap.add_argument(
         "--baselines-only",
         action="store_true",
-        help="Skip the activegraph stub; run only the four real baselines.",
+        help="Skip the ActiveGraph variants; run only the four baselines.",
+    )
+    ap.add_argument(
+        "--activegraph-only",
+        action="store_true",
+        help="Skip the four baselines; run only the ActiveGraph variants.",
     )
     args = ap.parse_args()
     mode_flag = (
@@ -65,7 +70,9 @@ def main() -> int:
     cfg = yaml.safe_load(CONFIG.read_text())
     systems = list(cfg["systems"])
     if args.baselines_only:
-        systems = [s for s in systems if s != "activegraph"]
+        systems = [s for s in systems if not s.startswith("activegraph")]
+    if args.activegraph_only:
+        systems = [s for s in systems if s.startswith("activegraph")]
     datasets = list(cfg["datasets"].keys())  # ['oracle', 's']
 
     matrix_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

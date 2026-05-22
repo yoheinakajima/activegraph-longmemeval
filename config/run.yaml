@@ -16,7 +16,8 @@ judge:
   temperature: 0.0
 
 embeddings:
-  # Used only by rag-dense.
+  # Used by rag-dense AND activegraph-det-embedding (same model so the
+  # embedding signal is comparable across systems).
   backend: openai
   model: text-embedding-3-small
 
@@ -30,12 +31,24 @@ full_context_s:
   token_budget: 180000
   truncation: oldest_first  # drop oldest sessions first if over budget
 
+activegraph:
+  # Mirror the turn-level RAG baselines (rag-dense/turn on `s` ≈ 2398 mean
+  # context tokens; rag-bm25/turn on `s` ≈ 2525). Accuracy claims against
+  # those baselines are meaningful only at a comparable token budget.
+  token_budget: 2500
+  # Corpus-relative thresholds, NOT tuned hyperparameters. Changing them
+  # shifts the signal across the entire benchmark and must be reported.
+  min_token_length: 4
+  min_session_cooccurrence: 2
+  max_doc_freq_fraction: 0.5
+
 systems:
   - full-context-oracle
   - full-context-s
   - rag-bm25
   - rag-dense
-  - activegraph
+  - activegraph-det-lexical
+  - activegraph-det-embedding
 
 datasets:
   oracle: data/longmemeval_oracle.json
