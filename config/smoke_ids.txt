@@ -1,0 +1,2 @@
+# Placeholder. Generate with `make smoke-ids` after `make data` and commit.
+# Until generated, --smoke runs will fail with a clear message.

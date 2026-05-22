@@ -1,0 +1,47 @@
+# All knobs for a benchmark run. Anything not in here is hardcoded by intent.
+
+reader:
+  backend: anthropic
+  # Alias requested at call time; the API returns the resolved dated snapshot
+  # which is what gets pinned into manifest.json.
+  model: claude-sonnet-4-5
+  temperature: 0.0
+  max_tokens: 1024
+  # Hard guarantee: tools/web access MUST be absent. Reader constructor asserts this.
+
+judge:
+  # Short name passed to upstream evaluate_qa.py; upstream maps it to gpt-4o-2024-08-06.
+  short_name: gpt-4o
+  resolved_model: gpt-4o-2024-08-06
+  temperature: 0.0
+
+embeddings:
+  # Used only by rag-dense.
+  backend: openai
+  model: text-embedding-3-small
+
+retrieval:
+  # Default for rag-bm25 and rag-dense. The matrix sweeps {turn, session} for the paper.
+  granularity: session   # turn | session
+  top_k: 10
+
+full_context_s:
+  # Sonnet's window is large; cap kept explicit so truncation is auditable.
+  token_budget: 180000
+  truncation: oldest_first  # drop oldest sessions first if over budget
+
+systems:
+  - full-context-oracle
+  - full-context-s
+  - rag-bm25
+  - rag-dense
+  - activegraph
+
+datasets:
+  oracle: data/longmemeval_oracle.json
+  s: data/longmemeval_s_cleaned.json
+
+seed: 42
+
+# Output directory for all run artifacts.
+output_dir: runs
