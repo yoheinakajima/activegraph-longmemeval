@@ -17,3 +17,10 @@ __pycache__/
 
 # tiktoken's BPE cache, populated on first network-enabled run.
 /.tiktoken_cache/
+
+# ignore data dirs at any depth, not just root
+**/data/
+# tiktoken cache at any depth
+**/.tiktoken_cache/
+# stray nested clone, should never be committed
+/activegraph-longmemeval/
