@@ -1,0 +1,42 @@
+Working in /home/runner/workspace (this is the real repo root — NOT the nested
+activegraph-longmemeval/ subfolder, which is stray and should be ignored). Current branch:
+baseline-results, which tracks origin/main. Two edits are already done and verified: the
+hyp_f.flush() line in src/activegraph_lme/cli.py (file parses OK) and httpx==0.27.2 pinned in
+pyproject.toml with uv.lock already regenerated (httpx 0.28.1 -> 0.27.2). The 12 run dirs from
+the 20260522T131528Z matrix are already copied into runs/.
+
+Do these steps and STOP at the checkpoint before pushing:
+
+1. Confirm the matrix file is present:
+   ls runs/matrix_20260522T131528Z.json
+   If missing, rebuild it from the individual runs/*/scores.json + manifest.json (the
+   build_results_table.py script consumes a combined matrix JSON as argv[1]).
+
+2. Regenerate the results table from the matrix file (the builder reads argv[1] and prints
+   markdown to stdout):
+   python scripts/build_results_table.py runs/matrix_20260522T131528Z.json > paper/results_tables.md
+   Then show me the first 45 lines of paper/results_tables.md. Sanity check the numbers MUST be:
+   full-context-s ~0.20, rag-dense/turn ~0.92 at ~2.4k ctx tokens, full-context-oracle ~0.96,
+   abstention 1.000 across all systems. If they differ materially, STOP and show me.
+
+3. Verify nothing is broken:
+   python -c "import ast; ast.parse(open('src/activegraph_lme/cli.py').read()); print('OK')"
+   uv lock --check    (or confirm uv.lock is consistent with pyproject.toml)
+
+4. Stage ONLY the intended changes and show me git status before committing:
+   git add runs/ paper/results_tables.md src/activegraph_lme/cli.py pyproject.toml uv.lock
+   git status
+   CHECKPOINT: the staged list must be exactly those paths. It must NOT include the nested
+   activegraph-longmemeval/ folder, artifacts/, lib/, .replit, or .env. If any of those are
+   staged, unstage them (git restore --staged <path>) and add them to .gitignore if not already.
+   Show me the final git status and WAIT for my confirmation before continuing.
+
+After I confirm the staged set looks right, I will tell you to run:
+   git commit -m "Pin smoke baselines (20260522T131528Z) + httpx 0.27.2 + flush-on-write durability"
+   git push origin baseline-results
+Then I'll open a PR baseline-results -> main on GitHub myself.
+
+Do NOT force-push. Do NOT touch the smoke-baselines-results branch or main directly. Do NOT
+modify anything under third_party/. Do NOT alter any run's scores/hypotheses/manifests — they
+are final. The push must use the existing origin GitHub auth; if push is blocked from the agent,
+tell me the exact one-line shell command to run myself in the Shell tab.
