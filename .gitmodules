@@ -1,0 +1,3 @@
+[submodule "third_party/longmemeval"]
+	path = third_party/longmemeval
+	url = https://github.com/xiaowu0162/longmemeval
