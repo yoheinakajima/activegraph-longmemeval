@@ -1,0 +1,506 @@
+[
+  {
+    "system": "full-context-oracle",
+    "dataset": "oracle",
+    "granularity": "n/a",
+    "run_dir": "runs/20260522T131528Z__full-context-oracle__oracle__g-n/a__full-context-oracle__oracle__smoke",
+    "overall_accuracy": 0.92,
+    "task_averaged_accuracy": 0.9505,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 1.0,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 1.0,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 1.0,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 0.8462,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.8571,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 1.0,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 5780.1,
+    "mean_completion_tokens": 79.2,
+    "mean_context_tokens": 5025.4,
+    "wall_clock_s": 54.765,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "system": "full-context-oracle",
+    "dataset": "s",
+    "granularity": "n/a",
+    "run_dir": "runs/20260522T131528Z__full-context-oracle__s__g-n/a__full-context-oracle__s__smoke",
+    "overall_accuracy": 0.96,
+    "task_averaged_accuracy": 0.9762,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 1.0,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 1.0,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 1.0,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 1.0,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.8571,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 1.0,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 5278.9,
+    "mean_completion_tokens": 69.6,
+    "mean_context_tokens": 4610.7,
+    "wall_clock_s": 42.919,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "system": "full-context-s",
+    "dataset": "oracle",
+    "granularity": "n/a",
+    "run_dir": "runs/20260522T131528Z__full-context-s__oracle__g-na__full-context-s__oracle__smoke",
+    "overall_accuracy": 0.9,
+    "task_averaged_accuracy": 0.9386,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 1.0,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 1.0,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 1.0,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 0.8462,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.7857,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 1.0,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 5790.3,
+    "mean_completion_tokens": 79.6,
+    "mean_context_tokens": 5029.5,
+    "wall_clock_s": 49.869,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "system": "full-context-s",
+    "dataset": "s",
+    "granularity": "n/a",
+    "run_dir": "runs/20260522T131528Z__full-context-s__s__g-na__full-context-s__s__smoke",
+    "overall_accuracy": 0.2,
+    "task_averaged_accuracy": 0.2164,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 0.4286,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 0.0,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 0.4,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 0.0769,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.1429,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 0.25,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 116402.0,
+    "mean_completion_tokens": 731.3,
+    "mean_context_tokens": 103257.0,
+    "wall_clock_s": 51.472,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "system": "rag-bm25",
+    "dataset": "oracle",
+    "granularity": "session",
+    "run_dir": "runs/20260522T131528Z__rag-bm25__oracle__g-session__rag-bm25__oracle__smoke",
+    "overall_accuracy": 0.94,
+    "task_averaged_accuracy": 0.9625,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 1.0,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 1.0,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 1.0,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 0.8462,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.9286,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 1.0,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 5780.1,
+    "mean_completion_tokens": 79.2,
+    "mean_context_tokens": 5025.4,
+    "wall_clock_s": 53.07,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "system": "rag-bm25",
+    "dataset": "oracle",
+    "granularity": "turn",
+    "run_dir": "runs/20260522T131528Z__rag-bm25__oracle__g-turn__rag-bm25__oracle__smoke",
+    "overall_accuracy": 0.88,
+    "task_averaged_accuracy": 0.9258,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 1.0,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 1.0,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 1.0,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 0.7692,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.7857,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 1.0,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 3436.2,
+    "mean_completion_tokens": 71.6,
+    "mean_context_tokens": 2960.4,
+    "wall_clock_s": 22.512,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "system": "rag-bm25",
+    "dataset": "s",
+    "granularity": "session",
+    "run_dir": "runs/20260522T131528Z__rag-bm25__s__g-session__rag-bm25__s__smoke",
+    "overall_accuracy": 0.7,
+    "task_averaged_accuracy": 0.7206,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 1.0,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 0.3333,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 1.0,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 0.6154,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.5,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 0.875,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 28273.0,
+    "mean_completion_tokens": 94.3,
+    "mean_context_tokens": 24927.7,
+    "wall_clock_s": 10.437,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "system": "rag-bm25",
+    "dataset": "s",
+    "granularity": "turn",
+    "run_dir": "runs/20260522T131528Z__rag-bm25__s__g-turn__rag-bm25__s__smoke",
+    "overall_accuracy": 0.8,
+    "task_averaged_accuracy": 0.8346,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 1.0,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 0.6667,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 1.0,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 0.7692,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.5714,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 1.0,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 2954.7,
+    "mean_completion_tokens": 69.5,
+    "mean_context_tokens": 2524.7,
+    "wall_clock_s": 33.221,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "system": "rag-dense",
+    "dataset": "oracle",
+    "granularity": "session",
+    "run_dir": "runs/20260522T131528Z__rag-dense__oracle__g-session__rag-dense__oracle__smoke",
+    "overall_accuracy": 0.88,
+    "task_averaged_accuracy": 0.9258,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 1.0,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 1.0,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 1.0,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 0.7692,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.7857,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 1.0,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 5780.1,
+    "mean_completion_tokens": 79.9,
+    "mean_context_tokens": 5025.4,
+    "wall_clock_s": 62.446,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "system": "rag-dense",
+    "dataset": "oracle",
+    "granularity": "turn",
+    "run_dir": "runs/20260522T131528Z__rag-dense__oracle__g-turn__rag-dense__oracle__smoke",
+    "overall_accuracy": 0.92,
+    "task_averaged_accuracy": 0.9515,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 1.0,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 1.0,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 1.0,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 0.9231,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.7857,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 1.0,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 3135.4,
+    "mean_completion_tokens": 82.5,
+    "mean_context_tokens": 2665.3,
+    "wall_clock_s": 41.378,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "system": "rag-dense",
+    "dataset": "s",
+    "granularity": "session",
+    "run_dir": "runs/20260522T131528Z__rag-dense__s__g-session__rag-dense__s__smoke",
+    "overall_accuracy": 0.66,
+    "task_averaged_accuracy": 0.7276,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 0.8571,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 0.6667,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 1.0,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 0.5385,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.4286,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 0.875,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 26848.3,
+    "mean_completion_tokens": 76.8,
+    "mean_context_tokens": 23601.7,
+    "wall_clock_s": 54.853,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "system": "rag-dense",
+    "dataset": "s",
+    "granularity": "turn",
+    "run_dir": "runs/20260522T131528Z__rag-dense__s__g-turn__rag-dense__s__smoke",
+    "overall_accuracy": 0.92,
+    "task_averaged_accuracy": 0.9524,
+    "abstention_accuracy": 1.0,
+    "per_type": {
+      "single-session-user": {
+        "accuracy": 1.0,
+        "n": 7
+      },
+      "single-session-preference": {
+        "accuracy": 1.0,
+        "n": 3
+      },
+      "single-session-assistant": {
+        "accuracy": 1.0,
+        "n": 5
+      },
+      "multi-session": {
+        "accuracy": 1.0,
+        "n": 13
+      },
+      "temporal-reasoning": {
+        "accuracy": 0.7143,
+        "n": 14
+      },
+      "knowledge-update": {
+        "accuracy": 1.0,
+        "n": 8
+      }
+    },
+    "n_questions": 50,
+    "n_truncated": 0,
+    "mean_prompt_tokens": 2842.0,
+    "mean_completion_tokens": 42.0,
+    "mean_context_tokens": 2398.0,
+    "wall_clock_s": 7.75,
+    "reader_model_resolved": "claude-sonnet-4-5-20250929"
+  }
+]
