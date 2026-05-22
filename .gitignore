@@ -1,0 +1,19 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# Data is downloaded, not committed. Only CHECKSUMS.sha256 lives in data/.
+/data/*
+!/data/CHECKSUMS.sha256
+!/data/.gitkeep
+
+# Runs are committed for the paper; keep tmp ones out.
+/runs/_tmp/
+
+# tiktoken's BPE cache, populated on first network-enabled run.
+/.tiktoken_cache/
