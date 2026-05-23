@@ -1,9 +1,11 @@
-"""Deterministic ActiveGraph (Mode A).
+"""Deterministic ActiveGraph (Mode A) — package-native.
 
-No LLM extraction. No reasoning at ingest. The graph is built from raw
-LongMemEval turns via fixed, corpus-relative rules and re-ingest of the
-same instance produces a byte-identical event log under a FrozenClock
-seed. Retrieval scores Turn nodes via one of two pinned signals:
+Built on top of the real ``activegraph`` pip package: every Turn / Session
+is an ``activegraph.Object``, every adjacency or co-occurrence is an
+``activegraph.Relation``, and the event log is ``activegraph.Graph.events``.
+Re-ingest of the same instance produces a byte-identical event log under
+a FrozenClock + deterministic run_id. Retrieval scores Turn objects via
+one of two pinned signals:
 
   * ``lexical``   — IDF-weighted distinctive-token overlap with the query
   * ``embedding`` — cosine similarity against ``text-embedding-3-small``
@@ -13,11 +15,11 @@ comparison is the only confound; the token budget mirrors the turn-level
 RAG baselines (~2.5k context tokens).
 """
 
-from .graph import Graph, Turn, build_graph
-from .retrieve import assemble, score_lexical, score_embedding
+from .graph import IngestState, Turn, build_graph
+from .retrieve import assemble, score_embedding, score_lexical
 
 __all__ = [
-    "Graph",
+    "IngestState",
     "Turn",
     "build_graph",
     "assemble",
