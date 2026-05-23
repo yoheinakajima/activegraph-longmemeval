@@ -69,9 +69,29 @@ Upstream LongMemEval reports numbers against Llama-3-as-reader (or
 similar). We use Claude Sonnet at temperature 0. **Absolute accuracy
 levels will differ.** The *relative* ordering above is what we verify.
 
-## When ActiveGraph enters (round two)
+## ActiveGraph deterministic (Mode A)
 
-Once activegraph's real internals replace the stub, expect a number
-*between* the best retrieval baseline and oracle for the same token
-budget. If activegraph beats oracle, treat it as a bug until proven
-otherwise — oracle is the upper bound under this reader.
+Two sub-variants run alongside the four baselines:
+`activegraph-det-lexical` and `activegraph-det-embedding`. Both build
+the same deterministic Turn graph (no LLM at ingest) and assemble under
+the same `activegraph.token_budget` (config default 2500 — mirrors the
+turn-level RAG baselines so accuracy comparisons aren't confounded by
+context size).
+
+Expectations:
+
+- Both ActiveGraph variants should land *between* the best turn-level
+  RAG baseline and `full-context-oracle` at comparable mean context
+  tokens. If either *beats* oracle, treat it as a bug — oracle is the
+  upper bound under this reader.
+- `activegraph-det-embedding` should ≥ `activegraph-det-lexical` on
+  semantic question types (`multi-session`, `temporal-reasoning`,
+  `knowledge-update`) for the same reason `rag-dense` typically beats
+  `rag-bm25` on those types.
+- `activegraph-det-lexical` should be competitive on
+  `single-session-user` (lexical overlap with the user's message) and
+  may equal or exceed the embedding sub-variant there.
+- `n_truncated` per the manifest will be 0 for most haystacks at the
+  default budget; if it's non-zero on a large fraction of questions
+  the budget needs to be raised (and reported alongside the new
+  comparison baseline).

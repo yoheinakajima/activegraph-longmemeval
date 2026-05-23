@@ -1,9 +1,9 @@
-from .base import System, AssembledContext
+from .activegraph_det import ActiveGraphDetSystem
+from .base import AssembledContext, System
 from .full_context_oracle import FullContextOracle
 from .full_context_s import FullContextS
 from .rag_bm25 import RagBM25
 from .rag_dense import RagDense
-from .activegraph_stub import ActiveGraphSystem
 
 
 def build_system(name: str, cfg) -> System:
@@ -24,8 +24,16 @@ def build_system(name: str, cfg) -> System:
             top_k=cfg.retrieval.top_k,
             embedding_model=cfg.embeddings.model,
         )
-    if name == "activegraph":
-        return ActiveGraphSystem(token_budget=cfg.full_context_s.token_budget)
+    if name in ("activegraph-det-lexical", "activegraph-det-embedding"):
+        signal = "lexical" if name.endswith("-lexical") else "embedding"
+        return ActiveGraphDetSystem(
+            retrieval_signal=signal,
+            token_budget=cfg.activegraph.token_budget,
+            min_token_length=cfg.activegraph.min_token_length,
+            min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+            max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+            embedding_model=cfg.embeddings.model,
+        )
     raise ValueError(f"Unknown system: {name}")
 
 
@@ -36,6 +44,6 @@ __all__ = [
     "FullContextS",
     "RagBM25",
     "RagDense",
-    "ActiveGraphSystem",
+    "ActiveGraphDetSystem",
     "build_system",
 ]
