@@ -21,6 +21,7 @@ dependencies = [
     "backoff==2.2.1",
     "requests==2.32.3",
     "click==8.1.7",
+    "activegraph==1.0.5.post2",
 ]
 
 [build-system]
