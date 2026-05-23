@@ -61,6 +61,7 @@ class ActiveGraphDetSystem:
         min_token_length: int,
         min_session_cooccurrence: int,
         max_doc_freq_fraction: float,
+        temporal_expansion_hops: int = 1,
         embedding_model: str = "text-embedding-3-small",
     ) -> None:
         if retrieval_signal not in ("lexical", "embedding"):
@@ -72,6 +73,7 @@ class ActiveGraphDetSystem:
         self.min_token_length = min_token_length
         self.min_session_cooccurrence = min_session_cooccurrence
         self.max_doc_freq_fraction = max_doc_freq_fraction
+        self.temporal_expansion_hops = temporal_expansion_hops
         self.embedding_model = embedding_model
         self._embedder: EmbeddingClient | None = None
 
@@ -116,7 +118,10 @@ class ActiveGraphDetSystem:
             )
 
         res: AssemblyResult = assemble(
-            state.graph, scores, token_budget=self.token_budget
+            state.graph,
+            scores,
+            token_budget=self.token_budget,
+            temporal_expansion_hops=self.temporal_expansion_hops,
         )
 
         meta = {
@@ -126,5 +131,6 @@ class ActiveGraphDetSystem:
             "n_temporal_expansions": res.n_expanded,
             "retrieval_signal": self.retrieval_signal,
             "token_budget": self.token_budget,
+            "temporal_expansion_hops": self.temporal_expansion_hops,
         }
         return AssembledContext(text=res.text, truncated=res.truncated, meta=meta)

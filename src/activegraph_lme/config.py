@@ -47,6 +47,17 @@ class ActiveGraphCfg(BaseModel):
     min_token_length: int = 4
     min_session_cooccurrence: int = 2
     max_doc_freq_fraction: float = 0.5
+    # Radius (in turns) for the global session-date temporal expansion that
+    # runs alongside the intra-session 1-hop pairing. A seed turn pulls in
+    # its N nearest neighbors in the global (session_date, session_idx,
+    # turn_idx) ordering, so consecutive-day evidence on temporal-reasoning
+    # questions survives the budget even when its raw similarity is lower
+    # than unrelated higher-scoring turns. Default 2 is the smallest value
+    # that reliably crosses a session boundary for the common 2-turn
+    # user/assistant session: it reaches the paired turn AND the first turn
+    # of the adjacent session by date. Set to 0 to disable cross-session
+    # expansion (intra-session pairing is preserved regardless).
+    temporal_expansion_hops: int = 2
 
 
 class RunCfg(BaseModel):

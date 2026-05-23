@@ -256,6 +256,114 @@ def _ag_temporal_expansion(cfg) -> tuple[str, str]:
             f"n_expanded reported={n_expanded})")
 
 
+def _ag_global_temporal_expansion(cfg) -> tuple[str, str]:
+    """Regression: when budget pressure would otherwise evict an evidence
+    turn that ranks below several higher-scoring distractors, the global
+    session-date temporal expansion pulls in the evidence turn that lives
+    in a different session but is chronologically adjacent to a surviving
+    seed.
+
+    Tests ``assemble()`` directly with synthetic scores so the assembly
+    behavior is exercised independently of the corpus-relative lexical
+    vocab filter (which over-prunes on tiny offline fixtures). This
+    mirrors the b46e15ed pattern: one of two consecutive-day evidence
+    turns ranks high (Feb 14 = seed) and its temporal neighbor (Feb 15)
+    has lower raw similarity than several unrelated distractors that
+    would otherwise consume the budget.
+    """
+    from activegraph_lme.activegraph.graph import build_graph
+    from activegraph_lme.activegraph.retrieve import assemble
+
+    inst = LMEInstance(
+        question_id="qtemp",
+        question_type="temporal-reasoning",
+        question="(synthetic-scores)",
+        answer="",
+        question_date="2025-03-01",
+        haystack_session_ids=[
+            "s_evidence_day1", "s_evidence_day2",
+            "s_d1", "s_d2", "s_d3", "s_d4", "s_d5", "s_d6",
+        ],
+        haystack_dates=[
+            "2025-02-14", "2025-02-15",
+            "2025-02-16", "2025-02-17", "2025-02-18", "2025-02-19", "2025-02-20", "2025-02-21",
+        ],
+        haystack_sessions=[
+            # Day 1 evidence: surfaces as a seed.
+            [
+                {"role": "user", "content": "Attended the charity fundraiser downtown today.", "has_answer": True},
+                {"role": "assistant", "content": "Great that you attended."},
+            ],
+            # Day 2 evidence: temporal neighbor of day 1 in global ordering.
+            # Lower raw similarity — only the global temporal expansion saves it.
+            [
+                {"role": "user", "content": "Returned to the same place again today, second visit.", "has_answer": True},
+                {"role": "assistant", "content": "Two visits in a row is dedication."},
+            ],
+            # Distractors: each scores above day-2-evidence on raw similarity.
+            [{"role": "user", "content": "Distractor A user line about an unrelated topic."},
+             {"role": "assistant", "content": "Distractor A reply."}],
+            [{"role": "user", "content": "Distractor B user line about an unrelated topic."},
+             {"role": "assistant", "content": "Distractor B reply."}],
+            [{"role": "user", "content": "Distractor C user line about an unrelated topic."},
+             {"role": "assistant", "content": "Distractor C reply."}],
+            [{"role": "user", "content": "Distractor D user line about an unrelated topic."},
+             {"role": "assistant", "content": "Distractor D reply."}],
+            [{"role": "user", "content": "Distractor E user line about an unrelated topic."},
+             {"role": "assistant", "content": "Distractor E reply."}],
+            [{"role": "user", "content": "Distractor F user line about an unrelated topic."},
+             {"role": "assistant", "content": "Distractor F reply."}],
+        ],
+        answer_session_ids=["s_evidence_day1", "s_evidence_day2"],
+    )
+
+    graph = build_graph(
+        inst.haystack_session_ids, inst.haystack_dates, inst.haystack_sessions,
+        min_token_length=cfg.activegraph.min_token_length,
+        min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+        max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+    )
+
+    # Synthetic scores: day 1 evidence is the top seed; six distractor sessions
+    # outrank day 2 evidence; day 2 has the lowest positive score. Under the
+    # OLD assembly (all positive seeds first, then expansion), with a budget
+    # that holds ~5 turns, day 2 is evicted because six distractors are added
+    # before it. Under the NEW interleaved assembly, day 1's expansion pulls
+    # day 2 in before any distractor consumes the budget.
+    scores: dict[str, float] = {}
+    for t in graph.turns:
+        if t.turn_id == "s_evidence_day1#0":
+            scores[t.turn_id] = 10.0   # high seed
+        elif t.turn_id == "s_evidence_day2#0":
+            scores[t.turn_id] = 0.1    # low positive — would lose at tight budget
+        elif t.session_id.startswith("s_d") and t.turn_idx == 0:
+            scores[t.turn_id] = 5.0    # distractors all rank between
+        else:
+            scores[t.turn_id] = 0.0    # zero-score: must not be selected as a seed
+
+    # Budget that holds roughly 4-5 short turns.
+    res_new = assemble(
+        graph, scores, token_budget=200,
+        temporal_expansion_hops=cfg.activegraph.temporal_expansion_hops,
+    )
+    has_d1 = "s_evidence_day1#0" in res_new.selected_turn_ids
+    has_d2 = "s_evidence_day2#0" in res_new.selected_turn_ids
+
+    # Sanity: confirm the OLD behavior (no cross-session expansion at all,
+    # i.e. hops=0) would have lost day 2 under this budget. Intra-session
+    # pairing remains active in both cases — day 2 lives in a DIFFERENT
+    # session, so only the global expansion can reach it.
+    res_no_exp = assemble(graph, scores, token_budget=200, temporal_expansion_hops=0)
+    no_exp_has_d2 = "s_evidence_day2#0" in res_no_exp.selected_turn_ids
+
+    ok = has_d1 and has_d2 and not no_exp_has_d2
+    return (PASS if ok else FAIL,
+            f"activegraph global-temporal expansion under tight budget "
+            f"(hops={cfg.activegraph.temporal_expansion_hops}: "
+            f"day1={has_d1}, day2={has_d2}; "
+            f"no-hops: day2={no_exp_has_d2})")
+
+
 def _ag_embedding_skip_or_smoke(cfg) -> tuple[str, str]:
     """If OPENAI_API_KEY is set we exercise the embedding path end-to-end,
     otherwise we record an explicit skip so the offline gate still passes
@@ -306,6 +414,7 @@ def main() -> int:
     results.append(_ag_reingest_equality(cfg))
     results.append(_ag_lexical_finds_evidence(cfg))
     results.append(_ag_temporal_expansion(cfg))
+    results.append(_ag_global_temporal_expansion(cfg))
     results.append(_ag_embedding_skip_or_smoke(cfg))
 
     n_fail = 0
