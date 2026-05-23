@@ -32,6 +32,7 @@ def build_system(name: str, cfg) -> System:
             min_token_length=cfg.activegraph.min_token_length,
             min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
             max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+            temporal_expansion_hops=cfg.activegraph.temporal_expansion_hops,
             embedding_model=cfg.embeddings.model,
         )
     raise ValueError(f"Unknown system: {name}")

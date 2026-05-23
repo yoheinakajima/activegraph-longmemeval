@@ -1,18 +1,23 @@
 """Retrieval signals + budgeted assembly.
 
 Two pinned signals share the same selection/assembly path. The signal
-returns a per-Turn score; the assembler:
+returns a per-Turn score; the assembler walks the score-ranked seeds in
+order and, for each seed, also pulls in its temporal neighbors before
+considering the next seed. Temporal neighbors are taken from two
+graph-derived relations:
 
-  1. ranks turns by (score desc, sort_key asc — chronological tie-break),
-  2. greedily adds turns under ``token_budget`` (computed via project tokenizer),
-  3. for each selected turn, adds its 1-hop temporal neighbor in the same
-     session (chronologically adjacent), again under budget,
-  4. emits selected turns in chronological order, joined by ``"\\n\\n"``.
+  * the intra-session 1-hop pair (existing structural use: pulling in
+    the paired user/assistant turn alongside a relevant utterance), and
+  * the global session-date ordering (new): a seed pulls in the turns
+    immediately before/after it in the chronological ordering across
+    all sessions, within ``temporal_expansion_hops``. This is what
+    survives consecutive-day evidence on temporal-reasoning questions
+    against unrelated higher-similarity turns.
 
-Step 3 is the structural "graph use" that distinguishes this from
-naive top-K — selecting an assistant reply pulls in the preceding user
-turn (and vice versa) so the reader sees the local pair, not a bare
-single utterance. It is deterministic and free of tuned knobs.
+The interleave (seed -> its expansions -> next seed) is the budget
+discipline that preserves a relevant turn's temporal context against
+lower-scoring competitors. Final turns are emitted in chronological
+order joined by ``"\\n\\n"``. Deterministic and free of tuned knobs.
 """
 
 from __future__ import annotations
@@ -168,12 +173,20 @@ def assemble(
     scores: dict[str, float],
     *,
     token_budget: int,
+    temporal_expansion_hops: int = 1,
 ) -> AssemblyResult:
     if not graph.turns:
         return AssemblyResult(text="", truncated=False, selected_turn_ids=[], n_seeds=0, n_expanded=0)
 
     by_id = {t.turn_id: t for t in graph.turns}
     sort_key = {t.turn_id: (t.session_date, t.session_idx, t.turn_idx) for t in graph.turns}
+
+    # Global chronological ordering across all sessions. The graph's
+    # intra-session temporal edges plus the session_date+session_idx ordering
+    # together induce this linear ordering; we materialize it once so a seed
+    # can reach its time-adjacent neighbors that live in a different session.
+    global_ordered = sorted(by_id.keys(), key=lambda tid: sort_key[tid])
+    global_pos = {tid: i for i, tid in enumerate(global_ordered)}
 
     # Stable ranking: -score, then chronological. Zero-score turns end up last
     # and won't be picked until everything positive is exhausted.
@@ -186,67 +199,83 @@ def assemble(
     selected_set: set[str] = set()
     running = 0
     truncated = False
+    n_seeds = 0
+    n_expanded = 0
 
-    def _fits(tid: str) -> bool:
-        nonlocal running
-        n = _tok_count(by_id[tid].text) + 2  # +2 approximates the "\n\n" joiner
-        return running + n <= token_budget
-
-    def _add(tid: str) -> bool:
-        nonlocal running
+    def _add(tid: str, *, is_seed: bool) -> bool:
+        nonlocal running, n_seeds, n_expanded, truncated
         if tid in selected_set:
             return True
-        n = _tok_count(by_id[tid].text) + 2
+        n = _tok_count(by_id[tid].text) + 2  # +2 approximates the "\n\n" joiner
         if running + n > token_budget:
+            truncated = True
             return False
         selected.append(tid)
         selected_set.add(tid)
         running += n
+        if is_seed:
+            n_seeds += 1
+        else:
+            n_expanded += 1
         return True
 
-    # 1) Seed selection by score.
-    n_seeds = 0
+    def _expansion_targets(seed_tid: str) -> list[str]:
+        """Temporal neighbors of `seed_tid` in deterministic order: the
+        intra-session paired turn first, then global session-date neighbors
+        out to `temporal_expansion_hops`, in chronological order.
+        """
+        t = by_id[seed_tid]
+        out: list[str] = []
+        seen: set[str] = set()
+
+        # Intra-session pair (preserved structural use).
+        for neigh in (
+            f"{t.session_id}#{t.turn_idx - 1}" if t.turn_idx > 0 else None,
+            f"{t.session_id}#{t.turn_idx + 1}",
+        ):
+            if neigh and neigh in by_id and neigh not in seen:
+                out.append(neigh)
+                seen.add(neigh)
+
+        # Global session-date temporal neighbors within `hops`. Skips the
+        # seed itself; intra-session neighbors that overlap are already in
+        # `seen` so they aren't appended twice. Order is chronological
+        # (closest before, farthest after) for stable assembly.
+        if temporal_expansion_hops > 0:
+            i = global_pos[seed_tid]
+            lo = max(0, i - temporal_expansion_hops)
+            hi = min(len(global_ordered), i + temporal_expansion_hops + 1)
+            for j in range(lo, hi):
+                neigh = global_ordered[j]
+                if neigh == seed_tid or neigh in seen:
+                    continue
+                out.append(neigh)
+                seen.add(neigh)
+        return out
+
+    # Interleaved fill: for each positive-score seed (in score order), add the
+    # seed AND its temporal expansions before moving to the next seed. The
+    # budget is consumed in (seed, neighbors) bundles so a relevant turn's
+    # temporal context cannot be evicted by a lower-relevance but
+    # higher-similarity later seed. Zero-score seeds are dropped.
     for tid in ranked:
         if scores.get(tid, 0.0) <= 0.0 and n_seeds > 0:
-            # Stop once we've exhausted positive-signal turns; the remaining
-            # turns have no lexical/semantic overlap with the query and should
-            # only appear via temporal expansion (or not at all).
+            # Exhausted positive-signal turns; remaining turns have no
+            # lexical/semantic overlap with the query and should not appear
+            # except via temporal expansion of a stronger seed (which has
+            # already happened by the time we get here).
             break
-        if not _fits(tid):
-            truncated = True
+        added_seed = _add(tid, is_seed=True)
+        if not added_seed:
+            # No room for this seed; expansions of an unselected seed are
+            # not meaningful, so move on. The score-ordered loop continues
+            # in case a smaller later seed still fits — matches prior
+            # behavior on the "ranked tail under tight budget" case.
             continue
-        if _add(tid):
-            n_seeds += 1
+        for neigh in _expansion_targets(tid):
+            _add(neigh, is_seed=False)
 
-    # 2) 1-hop temporal expansion in deterministic order over current seeds.
-    n_expanded = 0
-    expansion_targets: list[str] = []
-    seeds_snapshot = list(selected)
-    for tid in seeds_snapshot:
-        t = by_id[tid]
-        # previous turn in same session
-        prev_id = f"{t.session_id}#{t.turn_idx - 1}" if t.turn_idx > 0 else None
-        # next turn in same session
-        next_id = f"{t.session_id}#{t.turn_idx + 1}"
-        for neigh in (prev_id, next_id):
-            if neigh is None:
-                continue
-            if neigh in selected_set:
-                continue
-            if neigh in by_id:
-                expansion_targets.append(neigh)
-
-    # Add expansions in chronological order so the result is deterministic
-    # and time-ordered when the budget runs out mid-expansion.
-    expansion_targets = sorted(set(expansion_targets), key=lambda tid: sort_key[tid])
-    for tid in expansion_targets:
-        if not _fits(tid):
-            truncated = True
-            continue
-        if _add(tid):
-            n_expanded += 1
-
-    # 3) Emit in chronological order.
+    # Emit in chronological order.
     selected.sort(key=lambda tid: sort_key[tid])
     text = "\n\n".join(by_id[tid].text for tid in selected)
     return AssemblyResult(

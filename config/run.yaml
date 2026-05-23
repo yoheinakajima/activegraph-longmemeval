@@ -41,6 +41,13 @@ activegraph:
   min_token_length: 4
   min_session_cooccurrence: 2
   max_doc_freq_fraction: 0.5
+  # Radius (in turns) for global session-date temporal expansion. A relevant
+  # turn pulls in its N nearest neighbors in the global chronological
+  # ordering so temporal-reasoning evidence (consecutive-day turns in
+  # different sessions) is preserved against lower-relevance similarity
+  # matches. Default 2 is the smallest value that reliably crosses a
+  # session boundary for the common 2-turn user/assistant session.
+  temporal_expansion_hops: 2
 
 systems:
   - full-context-oracle
