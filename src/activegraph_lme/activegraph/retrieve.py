@@ -92,7 +92,7 @@ def truncate_for_embedding(text: str) -> str:
     activegraph-det-embedding so both embed long inputs identically."""
     import tiktoken
     enc = tiktoken.get_encoding("cl100k_base")
-    toks = enc.encode(text)
+    toks = enc.encode(text, disallowed_special=())
     if len(toks) <= _EMBED_MAX_TOKENS:
         return text
     return enc.decode(toks[:_EMBED_MAX_TOKENS])
