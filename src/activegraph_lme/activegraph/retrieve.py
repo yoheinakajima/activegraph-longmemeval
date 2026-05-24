@@ -82,6 +82,22 @@ def score_lexical(graph: Graph, question: str, min_token_length: int) -> dict[st
 
 # ---- embedding signal --------------------------------------------------------
 
+_EMBED_MAX_TOKENS = 8000  # safety margin under text-embedding-3-small's 8192 hard limit
+
+
+def truncate_for_embedding(text: str) -> str:
+    """Truncate to <=_EMBED_MAX_TOKENS cl100k tokens (the embedding model's hard
+    input limit). Deterministic; affects ONLY the similarity vector, never the
+    text assembled into the reader's context. Shared by rag-dense and
+    activegraph-det-embedding so both embed long inputs identically."""
+    import tiktoken
+    enc = tiktoken.get_encoding("cl100k_base")
+    toks = enc.encode(text)
+    if len(toks) <= _EMBED_MAX_TOKENS:
+        return text
+    return enc.decode(toks[:_EMBED_MAX_TOKENS])
+
+
 @dataclass
 class EmbeddingClient:
     model: str
@@ -119,7 +135,8 @@ class EmbeddingClient:
             B = 96
             new_vecs: list[np.ndarray] = []
             for i in range(0, len(new_texts), B):
-                resp = cli.embeddings.create(model=self.model, input=new_texts[i : i + B])
+                _batch = [truncate_for_embedding(t) for t in new_texts[i : i + B]]
+                resp = cli.embeddings.create(model=self.model, input=_batch)
                 new_vecs.extend(np.asarray(d.embedding, dtype=np.float32) for d in resp.data)
             for (_, t), v in zip(to_fetch, new_vecs):
                 # L2-normalize on insert so callers always read unit vectors.

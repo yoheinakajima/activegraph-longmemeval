@@ -42,6 +42,8 @@ def _embed_batch(model: str, texts: list[str]) -> np.ndarray:
     B = 96
     for i in range(0, len(texts), B):
         chunk = texts[i : i + B]
+        from activegraph_lme.activegraph.retrieve import truncate_for_embedding
+        chunk = [truncate_for_embedding(t) for t in chunk]
         resp = _get_client().embeddings.create(model=model, input=chunk)
         out.extend([np.asarray(d.embedding, dtype=np.float32) for d in resp.data])
     arr = np.stack(out, axis=0)
