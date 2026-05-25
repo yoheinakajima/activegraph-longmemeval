@@ -105,12 +105,12 @@ _EMBED_MAX_TOKENS = 8000  # safety margin under text-embedding-3-small's 8192 ha
 
 def truncate_for_embedding(text: str) -> str:
     """Truncate to <=_EMBED_MAX_TOKENS cl100k tokens (the embedding model's hard
-    input limit). Deterministic; affects ONLY the similarity vector, never the text
-    assembled into the reader's context. Shared by rag-dense and activegraph-det-embedding
-    so both systems embed long inputs identically (keeps the comparison unconfounded)."""
+    input limit). Deterministic; affects ONLY the similarity vector, never the
+    text assembled into the reader's context. Shared by rag-dense and
+    activegraph-det-embedding so both embed long inputs identically."""
     import tiktoken
     enc = tiktoken.get_encoding("cl100k_base")
-    toks = enc.encode(text)
+    toks = enc.encode(text, disallowed_special=())
     if len(toks) <= _EMBED_MAX_TOKENS:
         return text
     return enc.decode(toks[:_EMBED_MAX_TOKENS])
