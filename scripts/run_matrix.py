@@ -27,15 +27,25 @@ CONFIG = ROOT / "config/run.yaml"
 
 
 def aglme(*args: str) -> str:
-    res = subprocess.run(
-        [sys.executable, "-m", "activegraph_lme.cli", *args],
-        cwd=str(ROOT),
-        check=True,
-        text=True,
-        capture_output=True,
-    )
+    # Stream child output to a temp file rather than capture_output=True.
+    # A 500-question cell emits enough stdout to fill the OS pipe buffer (~64KB);
+    # with capture_output the parent only drains the pipe after the child exits,
+    # so the child blocks writing to a full pipe while the parent blocks waiting
+    # for the child -> deadlock at 0% CPU. Writing to a file avoids the pipe.
+    import tempfile
+    with tempfile.TemporaryFile(mode="w+") as tf:
+        subprocess.run(
+            [sys.executable, "-m", "activegraph_lme.cli", *args],
+            cwd=str(ROOT),
+            check=True,
+            text=True,
+            stdout=tf,
+            stderr=subprocess.STDOUT,
+        )
+        tf.seek(0)
+        out = tf.read()
     # `run` writes the run_dir path as the LAST stdout line.
-    return res.stdout.strip().splitlines()[-1]
+    return out.strip().splitlines()[-1]
 
 
 def with_granularity(granularity: str) -> Path:
