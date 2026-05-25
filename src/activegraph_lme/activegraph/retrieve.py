@@ -92,15 +92,67 @@ def _iter_turn_views(state: IngestState) -> list[Turn]:
     return [state.by_object_id[o.id] for o in pkg_objs]
 
 
+@dataclass(frozen=True)
+class _FactUnit:
+    """Scoreable view of a ``Fact`` object in the package graph.
+
+    Built on demand from ``graph.objects(type="Fact")`` so the assembler
+    can score and pack facts in the same pool as turns. ``sort_key``
+    embeds the source session's chronology so a fact emitted from a
+    given session sorts immediately after that session's turns in the
+    chronological emit pass (str-int-int tuple shape matches Turn's
+    ``sort_key`` so they're totally orderable).
+
+    Fact id convention: ``fact:<sha256-prefix>`` — contains no ``#`` so
+    the sidecar's ``rsplit('#', 1)`` session-id derivation skips it
+    cleanly (see scripts/aic_sidecar.py).
+    """
+
+    id: str
+    text: str
+    sort_key: tuple
+
+
+_FACT_SEQ_OFFSET = 10**9  # facts sort after any plausible turn_idx in the same session
+
+
+def _iter_fact_units(state: IngestState) -> list[_FactUnit]:
+    """Project Fact objects in package insertion order into Scoreable units.
+
+    Returns ``[]`` when no Fact objects exist (the default for every system
+    other than activegraph-sem-extract), keeping the assembler's pool
+    behavior-identical for turn-only systems.
+    """
+    out: list[_FactUnit] = []
+    for obj in state.graph.objects(type="Fact"):
+        data = obj.data or {}
+        text = str(data.get("text", ""))
+        session_date = str(data.get("session_date", ""))
+        session_idx = int(data.get("session_idx", 0))
+        # Package object ids are "Fact#<n>" in insertion order — use n as
+        # the per-session tiebreaker so facts emit in extraction order.
+        try:
+            seq = int(obj.id.rsplit("#", 1)[1])
+        except (IndexError, ValueError):
+            seq = 0
+        sort_key = (session_date, session_idx, _FACT_SEQ_OFFSET + seq)
+        fact_id = str(data.get("fact_id") or obj.id)
+        out.append(_FactUnit(id=fact_id, text=text, sort_key=sort_key))
+    return out
+
+
 def _iter_units(state: IngestState) -> list[Scoreable]:
     """Pool of scoreable units the assembler ranks/packs.
 
-    Today this is exactly the Turn projection (so behavior is identical to
-    the pre-seam path). The semantic-extract system extends this to union
-    in Fact units; the assembler does not need to know which kind it's
-    handling — only that each unit satisfies :class:`Scoreable`.
+    Default systems (turn-only) get exactly the Turn projection, matching
+    pre-seam behavior byte-for-byte. The semantic-extract system writes
+    ``Fact`` objects into the same package graph; this helper unions them
+    in so :func:`assemble`'s greedy/budget/join body stays unit-agnostic
+    (no separate "facts section").
     """
-    return list(_iter_turn_views(state))
+    units: list[Scoreable] = list(_iter_turn_views(state))
+    units.extend(_iter_fact_units(state))
+    return units
 
 
 # ---- lexical signal ----------------------------------------------------------

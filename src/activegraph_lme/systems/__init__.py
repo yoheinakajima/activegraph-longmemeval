@@ -1,4 +1,5 @@
 from .activegraph_det import ActiveGraphDetSystem
+from .activegraph_sem_extract import ActiveGraphSemExtractSystem
 from .base import AssembledContext, System
 from .full_context_oracle import FullContextOracle
 from .full_context_s import FullContextS
@@ -34,6 +35,14 @@ def build_system(name: str, cfg) -> System:
             max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
             embedding_model=cfg.embeddings.model,
         )
+    if name == "activegraph-sem-extract":
+        return ActiveGraphSemExtractSystem(
+            token_budget=cfg.activegraph.token_budget,
+            min_token_length=cfg.activegraph.min_token_length,
+            min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+            max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+            extractor_model=cfg.reader.model,
+        )
     raise ValueError(f"Unknown system: {name}")
 
 
@@ -45,5 +54,6 @@ __all__ = [
     "RagBM25",
     "RagDense",
     "ActiveGraphDetSystem",
+    "ActiveGraphSemExtractSystem",
     "build_system",
 ]
