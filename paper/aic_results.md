@@ -53,7 +53,13 @@ ActiveGraph places the gold evidence turn in context on 86.2% of questions vs. d
 turn-RAG's 81.7% — 21 fewer turn-level misses across 470. The accuracy edge (+1.9) tracks
 this retrieval edge rather than reader variance. ActiveGraph does, however, have slightly
 **more** reader-failures-with-evidence (35 vs. 27): it retrieves enough additional evidence
-to win on accuracy despite a marginally higher reader-fumble rate. This is a retrieval
+to win on accuracy despite a marginally higher reader-fumble rate. The two effects are the
+same order of magnitude: +21 net turn-AIC hits (25 won, 4 lost) against +8
+reader-failures-with-evidence (35 vs. 27). The significant retrieval advantage is partly
+absorbed by reader-fumbles on the extra context it surfaces, which is why end-to-end QA
+lands at +1.9 rather than tracking the full retrieval gap. The discordance is one-directional: of the 29 questions where the systems disagree on
+turn-AIC, ActiveGraph wins 25 and loses 4 (exact McNemar, p = 0.0001), so the +4.5-point
+retrieval edge is statistically established rather than a point estimate. This is a retrieval
 *outcome*, not evidence of graph *causality* — isolating the latter still requires the
 ablations listed in the post.
 
@@ -99,6 +105,14 @@ turn-level retrieval headroom, where ActiveGraph's advantage is largest (multi-s
 +8.2, temporal +7.1 turn-AIC) and where it most directly converts to accuracy. This is
 directionally consistent with the RAG-vs-GraphRAG literature (graph structure helps on
 multi-hop), but is **not** proof of causality.
+
+## What the benchmark cannot measure
+
+The substrate's retrieval ceiling is already high exactly where semantic memory is meant to
+help — knowledge-update sits at ~95% turn / ~99% session recall for both systems — so the
+bottleneck there is reader reconciliation, not retrieval. Whether typed superseded-fact
+representation actually eases that reconciliation is precisely what LongMemEval-S cannot
+measure, and is the real open question for the next experiment.
 
 ## Caveat
 
