@@ -22,7 +22,7 @@ from typing import Any, Literal
 
 import numpy as np
 
-from ..activegraph.graph import Graph, build_graph
+from ..activegraph.graph import IngestState, build_graph
 from ..activegraph.retrieve import (
     AssemblyResult,
     EmbeddingClient,
@@ -42,7 +42,7 @@ RetrievalSignal = Literal["lexical", "embedding"]
 
 @dataclass
 class _State:
-    graph: Graph
+    state: IngestState
     # Embedding mode caches the pinned per-turn embeddings here so retrieve()
     # is cheap and deterministic across re-calls.
     turn_embeddings: np.ndarray | None = None
@@ -87,7 +87,7 @@ class ActiveGraphDetSystem:
     # ---- frozen System protocol ----
 
     def ingest(self, instance: LMEInstance) -> _State:
-        graph = build_graph(
+        ingest_state = build_graph(
             instance.haystack_session_ids,
             instance.haystack_dates,
             instance.haystack_sessions,
@@ -95,10 +95,10 @@ class ActiveGraphDetSystem:
             min_session_cooccurrence=self.min_session_cooccurrence,
             max_doc_freq_fraction=self.max_doc_freq_fraction,
         )
-        state = _State(graph=graph, meta=dict(graph.stats()))
+        state = _State(state=ingest_state, meta=dict(ingest_state.stats()))
         if self.retrieval_signal == "embedding":
             embedder = self._get_embedder()
-            texts = [t.text for t in graph.turns]
+            texts = [t.text for t in ingest_state.turns]
             state.turn_embeddings = embedder.embed(texts)
         return state
 
@@ -107,16 +107,16 @@ class ActiveGraphDetSystem:
     ) -> AssembledContext:
         if self.retrieval_signal == "lexical":
             scores = score_lexical(
-                state.graph, question, min_token_length=self.min_token_length
+                state.state, question, min_token_length=self.min_token_length
             )
         else:
             embedder = self._get_embedder()
             scores, _ = score_embedding(
-                state.graph, question, embedder, turn_embeddings=state.turn_embeddings
+                state.state, question, embedder, turn_embeddings=state.turn_embeddings
             )
 
         res: AssemblyResult = assemble(
-            state.graph, scores, token_budget=self.token_budget
+            state.state, scores, token_budget=self.token_budget
         )
 
         meta = {

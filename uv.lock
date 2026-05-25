@@ -3,10 +3,24 @@ revision = 3
 requires-python = "==3.11.*"
 
 [[package]]
+name = "activegraph"
+version = "1.0.5.post2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1b/60/706a6814006c31b7404b9b4902b4cfb82ffca89846101dfa34e3b600dfce/activegraph-1.0.5.post2.tar.gz", hash = "sha256:e3ac4c52796b3eb7d260ac5dd77287e45b68e4e1877dd69376dcea40a4fb9a61", size = 325554, upload-time = "2026-05-20T06:29:47.819Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d5/c0/bb13dc7f5c082956190fd18e6f19f0514832da1237be85867c395a81f093/activegraph-1.0.5.post2-py3-none-any.whl", hash = "sha256:21ae881b386c5c82d2729ba11e5502650a1dbe60a31cef21b8d6a15b84b4310f", size = 250529, upload-time = "2026-05-20T06:29:45.975Z" },
+]
+
+[[package]]
 name = "activegraph-longmemeval"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "activegraph" },
     { name = "anthropic" },
     { name = "backoff" },
     { name = "click" },
@@ -24,6 +38,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "activegraph", specifier = "==1.0.5.post2" },
     { name = "anthropic", specifier = "==0.40.0" },
     { name = "backoff", specifier = "==2.2.1" },
     { name = "click", specifier = "==8.1.7" },
