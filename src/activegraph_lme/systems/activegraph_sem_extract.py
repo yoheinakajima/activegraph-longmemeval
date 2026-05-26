@@ -111,9 +111,22 @@ Task:
 Rules:
 - Only extract facts that the session text directly supports.
 - One claim per fact. Split compound claims.
+- Extract ONLY facts about the user's world: their preferences,
+  possessions, plans, identity, relationships, history, habits, opinions.
+  Exclude facts that merely record the user asking the assistant a
+  question, requesting help, or describe the topic of an
+  assistant-provided answer. If the fact is only true because the user
+  asked the assistant about something, exclude it. Include a fact only
+  if it would still be true even if this conversation never happened.
+  In particular, do NOT emit facts of the form "The user asked ...",
+  "The user requested ...", "The user wanted to learn / know ...",
+  "The user is learning how to ...", or "The user is interested in
+  <topic the assistant explained>".
 - Prefer durable facts about the user (preferences, identity, history,
   ongoing situations) over single-occasion small talk.
 - Use neutral third-person phrasing ("The user ...").
+- Do not emit two facts that express the same claim at different
+  granularities; keep the most specific single version.
 - If the session contains no extractable facts, return {{"facts": []}}.
 """
 
