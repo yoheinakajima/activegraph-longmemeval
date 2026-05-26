@@ -1,0 +1,4570 @@
+{
+  "run_id": "a__full-context-oracle__oracle__full",
+  "system": "full-context-oracle",
+  "dataset_path": "data/longmemeval_oracle.json",
+  "dataset_sha256": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c",
+  "config": {
+    "reader": {
+      "backend": "anthropic",
+      "model": "claude-sonnet-4-5",
+      "temperature": 0.0,
+      "max_tokens": 1024
+    },
+    "judge": {
+      "short_name": "gpt-4o",
+      "resolved_model": "gpt-4o-2024-08-06",
+      "temperature": 0.0
+    },
+    "embeddings": {
+      "backend": "openai",
+      "model": "text-embedding-3-small"
+    },
+    "retrieval": {
+      "granularity": "session",
+      "top_k": 10
+    },
+    "full_context_s": {
+      "token_budget": 180000,
+      "truncation": "oldest_first"
+    },
+    "activegraph": {
+      "token_budget": 2500,
+      "min_token_length": 4,
+      "min_session_cooccurrence": 2,
+      "max_doc_freq_fraction": 0.5
+    },
+    "systems": [
+      "full-context-oracle",
+      "full-context-s",
+      "rag-bm25",
+      "rag-dense",
+      "activegraph-det-lexical",
+      "activegraph-det-embedding"
+    ],
+    "datasets": {
+      "oracle": "data/longmemeval_oracle.json",
+      "s": "data/longmemeval_s_cleaned.json"
+    },
+    "seed": 42,
+    "output_dir": "runs"
+  },
+  "repo_sha": "563e6549c05251229109a70ca9d8fba6c8828a84",
+  "submodule_sha": "9e0b455f4ef0e2ab8f2e582289761153549043fc",
+  "reader_model_requested": "claude-sonnet-4-5",
+  "reader_model_resolved": "claude-sonnet-4-5-20250929",
+  "judge_short_name": "gpt-4o",
+  "judge_resolved_model": "gpt-4o-2024-08-06",
+  "seed": 42,
+  "python_version": "3.11.15",
+  "started_at": "2026-05-24T03:53:40.869788+00:00",
+  "finished_at": "2026-05-24T04:25:21.429164+00:00",
+  "wall_clock_s": 1900.545,
+  "n_questions": 500,
+  "n_truncated": 0,
+  "prompt_completion_token_source": "api",
+  "context_token_source": "tiktoken",
+  "require_authoritative_tokens": true,
+  "queries": [
+    {
+      "question_id": "gpt4_2655b836",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 8666,
+      "prompt_tokens": 9839,
+      "completion_tokens": 79,
+      "truncated": false,
+      "elapsed_s": 4.7072
+    },
+    {
+      "question_id": "gpt4_2487a7cb",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6941,
+      "prompt_tokens": 7820,
+      "completion_tokens": 144,
+      "truncated": false,
+      "elapsed_s": 5.717
+    },
+    {
+      "question_id": "gpt4_76048e76",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5374,
+      "prompt_tokens": 6315,
+      "completion_tokens": 96,
+      "truncated": false,
+      "elapsed_s": 3.9066
+    },
+    {
+      "question_id": "gpt4_2312f94c",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5732,
+      "prompt_tokens": 6615,
+      "completion_tokens": 58,
+      "truncated": false,
+      "elapsed_s": 2.5272
+    },
+    {
+      "question_id": "0bb5a684",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7360,
+      "prompt_tokens": 8132,
+      "completion_tokens": 62,
+      "truncated": false,
+      "elapsed_s": 2.6328
+    },
+    {
+      "question_id": "08f4fc43",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6331,
+      "prompt_tokens": 7050,
+      "completion_tokens": 63,
+      "truncated": false,
+      "elapsed_s": 2.6699
+    },
+    {
+      "question_id": "2c63a862",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5468,
+      "prompt_tokens": 6122,
+      "completion_tokens": 80,
+      "truncated": false,
+      "elapsed_s": 3.1361
+    },
+    {
+      "question_id": "gpt4_385a5000",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 4541,
+      "prompt_tokens": 5204,
+      "completion_tokens": 119,
+      "truncated": false,
+      "elapsed_s": 5.41
+    },
+    {
+      "question_id": "2a1811e2",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6027,
+      "prompt_tokens": 7020,
+      "completion_tokens": 184,
+      "truncated": false,
+      "elapsed_s": 4.9704
+    },
+    {
+      "question_id": "bbf86515",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5923,
+      "prompt_tokens": 6963,
+      "completion_tokens": 90,
+      "truncated": false,
+      "elapsed_s": 3.0537
+    },
+    {
+      "question_id": "gpt4_5dcc0aab",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 13197,
+      "prompt_tokens": 15563,
+      "completion_tokens": 58,
+      "truncated": false,
+      "elapsed_s": 2.8097
+    },
+    {
+      "question_id": "gpt4_0b2f1d21",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6675,
+      "prompt_tokens": 8229,
+      "completion_tokens": 166,
+      "truncated": false,
+      "elapsed_s": 5.3504
+    },
+    {
+      "question_id": "f0853d11",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6889,
+      "prompt_tokens": 7806,
+      "completion_tokens": 159,
+      "truncated": false,
+      "elapsed_s": 4.2133
+    },
+    {
+      "question_id": "gpt4_6ed717ea",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6671,
+      "prompt_tokens": 7737,
+      "completion_tokens": 104,
+      "truncated": false,
+      "elapsed_s": 3.9018
+    },
+    {
+      "question_id": "gpt4_70e84552",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7076,
+      "prompt_tokens": 7929,
+      "completion_tokens": 72,
+      "truncated": false,
+      "elapsed_s": 2.8061
+    },
+    {
+      "question_id": "a3838d2b",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 17689,
+      "prompt_tokens": 19305,
+      "completion_tokens": 199,
+      "truncated": false,
+      "elapsed_s": 5.5973
+    },
+    {
+      "question_id": "gpt4_93159ced",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6713,
+      "prompt_tokens": 7552,
+      "completion_tokens": 87,
+      "truncated": false,
+      "elapsed_s": 3.1746
+    },
+    {
+      "question_id": "gpt4_2d58bcd6",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7274,
+      "prompt_tokens": 8264,
+      "completion_tokens": 80,
+      "truncated": false,
+      "elapsed_s": 3.385
+    },
+    {
+      "question_id": "gpt4_65aabe59",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6843,
+      "prompt_tokens": 8021,
+      "completion_tokens": 155,
+      "truncated": false,
+      "elapsed_s": 4.9866
+    },
+    {
+      "question_id": "982b5123",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5867,
+      "prompt_tokens": 6789,
+      "completion_tokens": 157,
+      "truncated": false,
+      "elapsed_s": 5.5415
+    },
+    {
+      "question_id": "b9cfe692",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7952,
+      "prompt_tokens": 9139,
+      "completion_tokens": 107,
+      "truncated": false,
+      "elapsed_s": 3.5537
+    },
+    {
+      "question_id": "gpt4_4edbafa2",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6655,
+      "prompt_tokens": 8023,
+      "completion_tokens": 150,
+      "truncated": false,
+      "elapsed_s": 4.9088
+    },
+    {
+      "question_id": "c8090214",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6111,
+      "prompt_tokens": 6986,
+      "completion_tokens": 90,
+      "truncated": false,
+      "elapsed_s": 3.1287
+    },
+    {
+      "question_id": "gpt4_483dd43c",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6289,
+      "prompt_tokens": 7097,
+      "completion_tokens": 186,
+      "truncated": false,
+      "elapsed_s": 5.4629
+    },
+    {
+      "question_id": "e4e14d04",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5950,
+      "prompt_tokens": 6738,
+      "completion_tokens": 138,
+      "truncated": false,
+      "elapsed_s": 3.8929
+    },
+    {
+      "question_id": "c9f37c46",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6649,
+      "prompt_tokens": 7386,
+      "completion_tokens": 171,
+      "truncated": false,
+      "elapsed_s": 4.7333
+    },
+    {
+      "question_id": "gpt4_2c50253f",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6654,
+      "prompt_tokens": 7802,
+      "completion_tokens": 73,
+      "truncated": false,
+      "elapsed_s": 3.1656
+    },
+    {
+      "question_id": "dcfa8644",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5462,
+      "prompt_tokens": 6224,
+      "completion_tokens": 69,
+      "truncated": false,
+      "elapsed_s": 5.9504
+    },
+    {
+      "question_id": "gpt4_b4a80587",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6897,
+      "prompt_tokens": 7744,
+      "completion_tokens": 129,
+      "truncated": false,
+      "elapsed_s": 4.9219
+    },
+    {
+      "question_id": "gpt4_9a159967",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7683,
+      "prompt_tokens": 8635,
+      "completion_tokens": 194,
+      "truncated": false,
+      "elapsed_s": 5.6601
+    },
+    {
+      "question_id": "cc6d1ec1",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6387,
+      "prompt_tokens": 7212,
+      "completion_tokens": 131,
+      "truncated": false,
+      "elapsed_s": 5.4182
+    },
+    {
+      "question_id": "gpt4_8c8961ae",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6674,
+      "prompt_tokens": 7722,
+      "completion_tokens": 99,
+      "truncated": false,
+      "elapsed_s": 3.8912
+    },
+    {
+      "question_id": "gpt4_d9af6064",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6410,
+      "prompt_tokens": 7199,
+      "completion_tokens": 46,
+      "truncated": false,
+      "elapsed_s": 2.7071
+    },
+    {
+      "question_id": "gpt4_7de946e7",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5381,
+      "prompt_tokens": 6254,
+      "completion_tokens": 86,
+      "truncated": false,
+      "elapsed_s": 3.5641
+    },
+    {
+      "question_id": "d01c6aa8",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7461,
+      "prompt_tokens": 8310,
+      "completion_tokens": 64,
+      "truncated": false,
+      "elapsed_s": 3.1251
+    },
+    {
+      "question_id": "993da5e2",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5397,
+      "prompt_tokens": 6324,
+      "completion_tokens": 93,
+      "truncated": false,
+      "elapsed_s": 3.2209
+    },
+    {
+      "question_id": "a3045048",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 4802,
+      "prompt_tokens": 5648,
+      "completion_tokens": 60,
+      "truncated": false,
+      "elapsed_s": 3.1315
+    },
+    {
+      "question_id": "gpt4_d31cdae3",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5502,
+      "prompt_tokens": 6319,
+      "completion_tokens": 131,
+      "truncated": false,
+      "elapsed_s": 3.8804
+    },
+    {
+      "question_id": "gpt4_cd90e484",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6008,
+      "prompt_tokens": 6718,
+      "completion_tokens": 157,
+      "truncated": false,
+      "elapsed_s": 5.2292
+    },
+    {
+      "question_id": "gpt4_88806d6e",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5161,
+      "prompt_tokens": 5706,
+      "completion_tokens": 148,
+      "truncated": false,
+      "elapsed_s": 4.7707
+    },
+    {
+      "question_id": "gpt4_4cd9eba1",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7364,
+      "prompt_tokens": 8326,
+      "completion_tokens": 91,
+      "truncated": false,
+      "elapsed_s": 4.3386
+    },
+    {
+      "question_id": "gpt4_93f6379c",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 11079,
+      "prompt_tokens": 12323,
+      "completion_tokens": 150,
+      "truncated": false,
+      "elapsed_s": 4.6598
+    },
+    {
+      "question_id": "b29f3365",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6206,
+      "prompt_tokens": 6852,
+      "completion_tokens": 72,
+      "truncated": false,
+      "elapsed_s": 3.5763
+    },
+    {
+      "question_id": "gpt4_2f56ae70",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 8256,
+      "prompt_tokens": 9292,
+      "completion_tokens": 76,
+      "truncated": false,
+      "elapsed_s": 3.4667
+    },
+    {
+      "question_id": "6613b389",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 8793,
+      "prompt_tokens": 10121,
+      "completion_tokens": 46,
+      "truncated": false,
+      "elapsed_s": 2.2924
+    },
+    {
+      "question_id": "gpt4_78cf46a3",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5166,
+      "prompt_tokens": 5719,
+      "completion_tokens": 127,
+      "truncated": false,
+      "elapsed_s": 3.6984
+    },
+    {
+      "question_id": "gpt4_0a05b494",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6868,
+      "prompt_tokens": 7845,
+      "completion_tokens": 186,
+      "truncated": false,
+      "elapsed_s": 4.7742
+    },
+    {
+      "question_id": "gpt4_1a1dc16d",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5898,
+      "prompt_tokens": 6534,
+      "completion_tokens": 43,
+      "truncated": false,
+      "elapsed_s": 2.8518
+    },
+    {
+      "question_id": "gpt4_2f584639",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 4825,
+      "prompt_tokens": 5684,
+      "completion_tokens": 127,
+      "truncated": false,
+      "elapsed_s": 4.0529
+    },
+    {
+      "question_id": "gpt4_213fd887",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7703,
+      "prompt_tokens": 8671,
+      "completion_tokens": 180,
+      "truncated": false,
+      "elapsed_s": 6.0063
+    },
+    {
+      "question_id": "gpt4_5438fa52",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7803,
+      "prompt_tokens": 8815,
+      "completion_tokens": 150,
+      "truncated": false,
+      "elapsed_s": 5.2824
+    },
+    {
+      "question_id": "gpt4_c27434e8",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6693,
+      "prompt_tokens": 7522,
+      "completion_tokens": 123,
+      "truncated": false,
+      "elapsed_s": 4.5818
+    },
+    {
+      "question_id": "gpt4_fe651585",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6400,
+      "prompt_tokens": 7262,
+      "completion_tokens": 89,
+      "truncated": false,
+      "elapsed_s": 3.0105
+    },
+    {
+      "question_id": "8c18457d",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 4378,
+      "prompt_tokens": 5263,
+      "completion_tokens": 89,
+      "truncated": false,
+      "elapsed_s": 2.9841
+    },
+    {
+      "question_id": "gpt4_70e84552_abs",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7078,
+      "prompt_tokens": 7934,
+      "completion_tokens": 125,
+      "truncated": false,
+      "elapsed_s": 4.2932
+    },
+    {
+      "question_id": "gpt4_93159ced_abs",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6715,
+      "prompt_tokens": 7556,
+      "completion_tokens": 80,
+      "truncated": false,
+      "elapsed_s": 6.4182
+    },
+    {
+      "question_id": "982b5123_abs",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5869,
+      "prompt_tokens": 6786,
+      "completion_tokens": 127,
+      "truncated": false,
+      "elapsed_s": 4.4449
+    },
+    {
+      "question_id": "c8090214_abs",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6113,
+      "prompt_tokens": 6989,
+      "completion_tokens": 117,
+      "truncated": false,
+      "elapsed_s": 4.7318
+    },
+    {
+      "question_id": "gpt4_c27434e8_abs",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6695,
+      "prompt_tokens": 7535,
+      "completion_tokens": 137,
+      "truncated": false,
+      "elapsed_s": 4.2323
+    },
+    {
+      "question_id": "gpt4_fe651585_abs",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6402,
+      "prompt_tokens": 7266,
+      "completion_tokens": 78,
+      "truncated": false,
+      "elapsed_s": 3.9179
+    },
+    {
+      "question_id": "0a995998",
+      "question_type": "multi-session",
+      "context_tokens": 8130,
+      "prompt_tokens": 9181,
+      "completion_tokens": 107,
+      "truncated": false,
+      "elapsed_s": 3.974
+    },
+    {
+      "question_id": "6d550036",
+      "question_type": "multi-session",
+      "context_tokens": 14129,
+      "prompt_tokens": 15813,
+      "completion_tokens": 79,
+      "truncated": false,
+      "elapsed_s": 3.61
+    },
+    {
+      "question_id": "gpt4_59c863d7",
+      "question_type": "multi-session",
+      "context_tokens": 15810,
+      "prompt_tokens": 18099,
+      "completion_tokens": 125,
+      "truncated": false,
+      "elapsed_s": 4.3815
+    },
+    {
+      "question_id": "b5ef892d",
+      "question_type": "multi-session",
+      "context_tokens": 9983,
+      "prompt_tokens": 11738,
+      "completion_tokens": 120,
+      "truncated": false,
+      "elapsed_s": 6.2099
+    },
+    {
+      "question_id": "e831120c",
+      "question_type": "multi-session",
+      "context_tokens": 5794,
+      "prompt_tokens": 6847,
+      "completion_tokens": 128,
+      "truncated": false,
+      "elapsed_s": 4.2779
+    },
+    {
+      "question_id": "3a704032",
+      "question_type": "multi-session",
+      "context_tokens": 9908,
+      "prompt_tokens": 11470,
+      "completion_tokens": 136,
+      "truncated": false,
+      "elapsed_s": 4.5477
+    },
+    {
+      "question_id": "gpt4_d84a3211",
+      "question_type": "multi-session",
+      "context_tokens": 11251,
+      "prompt_tokens": 12615,
+      "completion_tokens": 84,
+      "truncated": false,
+      "elapsed_s": 4.86
+    },
+    {
+      "question_id": "aae3761f",
+      "question_type": "multi-session",
+      "context_tokens": 9372,
+      "prompt_tokens": 10962,
+      "completion_tokens": 123,
+      "truncated": false,
+      "elapsed_s": 3.9343
+    },
+    {
+      "question_id": "gpt4_f2262a51",
+      "question_type": "multi-session",
+      "context_tokens": 9641,
+      "prompt_tokens": 11283,
+      "completion_tokens": 89,
+      "truncated": false,
+      "elapsed_s": 2.8117
+    },
+    {
+      "question_id": "dd2973ad",
+      "question_type": "multi-session",
+      "context_tokens": 5480,
+      "prompt_tokens": 6609,
+      "completion_tokens": 78,
+      "truncated": false,
+      "elapsed_s": 3.4803
+    },
+    {
+      "question_id": "c4a1ceb8",
+      "question_type": "multi-session",
+      "context_tokens": 12050,
+      "prompt_tokens": 14598,
+      "completion_tokens": 209,
+      "truncated": false,
+      "elapsed_s": 4.9073
+    },
+    {
+      "question_id": "gpt4_a56e767c",
+      "question_type": "multi-session",
+      "context_tokens": 10509,
+      "prompt_tokens": 11850,
+      "completion_tokens": 165,
+      "truncated": false,
+      "elapsed_s": 5.6445
+    },
+    {
+      "question_id": "6cb6f249",
+      "question_type": "multi-session",
+      "context_tokens": 6672,
+      "prompt_tokens": 7417,
+      "completion_tokens": 75,
+      "truncated": false,
+      "elapsed_s": 3.1904
+    },
+    {
+      "question_id": "46a3abf7",
+      "question_type": "multi-session",
+      "context_tokens": 10919,
+      "prompt_tokens": 12408,
+      "completion_tokens": 67,
+      "truncated": false,
+      "elapsed_s": 3.636
+    },
+    {
+      "question_id": "36b9f61e",
+      "question_type": "multi-session",
+      "context_tokens": 9573,
+      "prompt_tokens": 10920,
+      "completion_tokens": 183,
+      "truncated": false,
+      "elapsed_s": 7.6752
+    },
+    {
+      "question_id": "28dc39ac",
+      "question_type": "multi-session",
+      "context_tokens": 17692,
+      "prompt_tokens": 20325,
+      "completion_tokens": 237,
+      "truncated": false,
+      "elapsed_s": 7.3185
+    },
+    {
+      "question_id": "gpt4_2f8be40d",
+      "question_type": "multi-session",
+      "context_tokens": 10745,
+      "prompt_tokens": 12035,
+      "completion_tokens": 102,
+      "truncated": false,
+      "elapsed_s": 4.4437
+    },
+    {
+      "question_id": "2e6d26dc",
+      "question_type": "multi-session",
+      "context_tokens": 10282,
+      "prompt_tokens": 11678,
+      "completion_tokens": 216,
+      "truncated": false,
+      "elapsed_s": 6.1004
+    },
+    {
+      "question_id": "gpt4_15e38248",
+      "question_type": "multi-session",
+      "context_tokens": 9924,
+      "prompt_tokens": 11478,
+      "completion_tokens": 156,
+      "truncated": false,
+      "elapsed_s": 4.9128
+    },
+    {
+      "question_id": "88432d0a",
+      "question_type": "multi-session",
+      "context_tokens": 12074,
+      "prompt_tokens": 14027,
+      "completion_tokens": 178,
+      "truncated": false,
+      "elapsed_s": 4.4112
+    },
+    {
+      "question_id": "80ec1f4f",
+      "question_type": "multi-session",
+      "context_tokens": 6907,
+      "prompt_tokens": 7657,
+      "completion_tokens": 172,
+      "truncated": false,
+      "elapsed_s": 5.2464
+    },
+    {
+      "question_id": "d23cf73b",
+      "question_type": "multi-session",
+      "context_tokens": 13864,
+      "prompt_tokens": 16589,
+      "completion_tokens": 160,
+      "truncated": false,
+      "elapsed_s": 5.0109
+    },
+    {
+      "question_id": "gpt4_7fce9456",
+      "question_type": "multi-session",
+      "context_tokens": 17048,
+      "prompt_tokens": 19259,
+      "completion_tokens": 131,
+      "truncated": false,
+      "elapsed_s": 4.9437
+    },
+    {
+      "question_id": "d682f1a2",
+      "question_type": "multi-session",
+      "context_tokens": 9203,
+      "prompt_tokens": 11274,
+      "completion_tokens": 161,
+      "truncated": false,
+      "elapsed_s": 5.381
+    },
+    {
+      "question_id": "7024f17c",
+      "question_type": "multi-session",
+      "context_tokens": 9246,
+      "prompt_tokens": 10295,
+      "completion_tokens": 175,
+      "truncated": false,
+      "elapsed_s": 6.0964
+    },
+    {
+      "question_id": "gpt4_5501fe77",
+      "question_type": "multi-session",
+      "context_tokens": 10456,
+      "prompt_tokens": 11782,
+      "completion_tokens": 46,
+      "truncated": false,
+      "elapsed_s": 3.4964
+    },
+    {
+      "question_id": "gpt4_2ba83207",
+      "question_type": "multi-session",
+      "context_tokens": 11358,
+      "prompt_tokens": 13763,
+      "completion_tokens": 255,
+      "truncated": false,
+      "elapsed_s": 7.3918
+    },
+    {
+      "question_id": "2318644b",
+      "question_type": "multi-session",
+      "context_tokens": 6697,
+      "prompt_tokens": 8030,
+      "completion_tokens": 103,
+      "truncated": false,
+      "elapsed_s": 3.5279
+    },
+    {
+      "question_id": "2ce6a0f2",
+      "question_type": "multi-session",
+      "context_tokens": 10924,
+      "prompt_tokens": 12094,
+      "completion_tokens": 138,
+      "truncated": false,
+      "elapsed_s": 4.9953
+    },
+    {
+      "question_id": "gpt4_d12ceb0e",
+      "question_type": "multi-session",
+      "context_tokens": 9787,
+      "prompt_tokens": 11245,
+      "completion_tokens": 172,
+      "truncated": false,
+      "elapsed_s": 4.5894
+    },
+    {
+      "question_id": "00ca467f",
+      "question_type": "multi-session",
+      "context_tokens": 10127,
+      "prompt_tokens": 11573,
+      "completion_tokens": 99,
+      "truncated": false,
+      "elapsed_s": 3.6364
+    },
+    {
+      "question_id": "b3c15d39",
+      "question_type": "multi-session",
+      "context_tokens": 5463,
+      "prompt_tokens": 6332,
+      "completion_tokens": 76,
+      "truncated": false,
+      "elapsed_s": 3.5344
+    },
+    {
+      "question_id": "gpt4_31ff4165",
+      "question_type": "multi-session",
+      "context_tokens": 16106,
+      "prompt_tokens": 18206,
+      "completion_tokens": 151,
+      "truncated": false,
+      "elapsed_s": 5.2691
+    },
+    {
+      "question_id": "eeda8a6d",
+      "question_type": "multi-session",
+      "context_tokens": 6275,
+      "prompt_tokens": 7210,
+      "completion_tokens": 206,
+      "truncated": false,
+      "elapsed_s": 5.4293
+    },
+    {
+      "question_id": "2788b940",
+      "question_type": "multi-session",
+      "context_tokens": 12168,
+      "prompt_tokens": 14488,
+      "completion_tokens": 130,
+      "truncated": false,
+      "elapsed_s": 3.9572
+    },
+    {
+      "question_id": "60bf93ed",
+      "question_type": "multi-session",
+      "context_tokens": 5920,
+      "prompt_tokens": 6708,
+      "completion_tokens": 57,
+      "truncated": false,
+      "elapsed_s": 2.8619
+    },
+    {
+      "question_id": "9d25d4e0",
+      "question_type": "multi-session",
+      "context_tokens": 9446,
+      "prompt_tokens": 10776,
+      "completion_tokens": 184,
+      "truncated": false,
+      "elapsed_s": 5.6288
+    },
+    {
+      "question_id": "129d1232",
+      "question_type": "multi-session",
+      "context_tokens": 10016,
+      "prompt_tokens": 11487,
+      "completion_tokens": 97,
+      "truncated": false,
+      "elapsed_s": 3.2484
+    },
+    {
+      "question_id": "60472f9c",
+      "question_type": "multi-session",
+      "context_tokens": 10619,
+      "prompt_tokens": 11869,
+      "completion_tokens": 75,
+      "truncated": false,
+      "elapsed_s": 2.7227
+    },
+    {
+      "question_id": "gpt4_194be4b3",
+      "question_type": "multi-session",
+      "context_tokens": 16101,
+      "prompt_tokens": 18196,
+      "completion_tokens": 158,
+      "truncated": false,
+      "elapsed_s": 5.2166
+    },
+    {
+      "question_id": "a9f6b44c",
+      "question_type": "multi-session",
+      "context_tokens": 6489,
+      "prompt_tokens": 7436,
+      "completion_tokens": 69,
+      "truncated": false,
+      "elapsed_s": 2.9922
+    },
+    {
+      "question_id": "d851d5ba",
+      "question_type": "multi-session",
+      "context_tokens": 12263,
+      "prompt_tokens": 13444,
+      "completion_tokens": 92,
+      "truncated": false,
+      "elapsed_s": 4.3119
+    },
+    {
+      "question_id": "5a7937c8",
+      "question_type": "multi-session",
+      "context_tokens": 9436,
+      "prompt_tokens": 10478,
+      "completion_tokens": 108,
+      "truncated": false,
+      "elapsed_s": 4.8827
+    },
+    {
+      "question_id": "gpt4_ab202e7f",
+      "question_type": "multi-session",
+      "context_tokens": 15774,
+      "prompt_tokens": 19228,
+      "completion_tokens": 84,
+      "truncated": false,
+      "elapsed_s": 3.2244
+    },
+    {
+      "question_id": "gpt4_e05b82a6",
+      "question_type": "multi-session",
+      "context_tokens": 10775,
+      "prompt_tokens": 12507,
+      "completion_tokens": 217,
+      "truncated": false,
+      "elapsed_s": 5.8672
+    },
+    {
+      "question_id": "gpt4_731e37d7",
+      "question_type": "multi-session",
+      "context_tokens": 11812,
+      "prompt_tokens": 13155,
+      "completion_tokens": 182,
+      "truncated": false,
+      "elapsed_s": 6.2251
+    },
+    {
+      "question_id": "edced276",
+      "question_type": "multi-session",
+      "context_tokens": 5716,
+      "prompt_tokens": 6629,
+      "completion_tokens": 107,
+      "truncated": false,
+      "elapsed_s": 4.7424
+    },
+    {
+      "question_id": "10d9b85a",
+      "question_type": "multi-session",
+      "context_tokens": 6977,
+      "prompt_tokens": 7809,
+      "completion_tokens": 104,
+      "truncated": false,
+      "elapsed_s": 4.1498
+    },
+    {
+      "question_id": "e3038f8c",
+      "question_type": "multi-session",
+      "context_tokens": 13219,
+      "prompt_tokens": 14953,
+      "completion_tokens": 246,
+      "truncated": false,
+      "elapsed_s": 6.0488
+    },
+    {
+      "question_id": "2b8f3739",
+      "question_type": "multi-session",
+      "context_tokens": 10090,
+      "prompt_tokens": 11865,
+      "completion_tokens": 161,
+      "truncated": false,
+      "elapsed_s": 5.4817
+    },
+    {
+      "question_id": "1a8a66a6",
+      "question_type": "multi-session",
+      "context_tokens": 10516,
+      "prompt_tokens": 12125,
+      "completion_tokens": 153,
+      "truncated": false,
+      "elapsed_s": 4.8486
+    },
+    {
+      "question_id": "c2ac3c61",
+      "question_type": "multi-session",
+      "context_tokens": 7447,
+      "prompt_tokens": 8381,
+      "completion_tokens": 67,
+      "truncated": false,
+      "elapsed_s": 2.6558
+    },
+    {
+      "question_id": "bf659f65",
+      "question_type": "multi-session",
+      "context_tokens": 8117,
+      "prompt_tokens": 9149,
+      "completion_tokens": 259,
+      "truncated": false,
+      "elapsed_s": 6.8298
+    },
+    {
+      "question_id": "gpt4_372c3eed",
+      "question_type": "multi-session",
+      "context_tokens": 11423,
+      "prompt_tokens": 12851,
+      "completion_tokens": 179,
+      "truncated": false,
+      "elapsed_s": 5.0864
+    },
+    {
+      "question_id": "gpt4_2f91af09",
+      "question_type": "multi-session",
+      "context_tokens": 10989,
+      "prompt_tokens": 12078,
+      "completion_tokens": 216,
+      "truncated": false,
+      "elapsed_s": 7.4454
+    },
+    {
+      "question_id": "81507db6",
+      "question_type": "multi-session",
+      "context_tokens": 15044,
+      "prompt_tokens": 16871,
+      "completion_tokens": 152,
+      "truncated": false,
+      "elapsed_s": 7.7364
+    },
+    {
+      "question_id": "88432d0a_abs",
+      "question_type": "multi-session",
+      "context_tokens": 12078,
+      "prompt_tokens": 14035,
+      "completion_tokens": 131,
+      "truncated": false,
+      "elapsed_s": 4.5439
+    },
+    {
+      "question_id": "80ec1f4f_abs",
+      "question_type": "multi-session",
+      "context_tokens": 6910,
+      "prompt_tokens": 7660,
+      "completion_tokens": 109,
+      "truncated": false,
+      "elapsed_s": 3.9604
+    },
+    {
+      "question_id": "eeda8a6d_abs",
+      "question_type": "multi-session",
+      "context_tokens": 6277,
+      "prompt_tokens": 7212,
+      "completion_tokens": 107,
+      "truncated": false,
+      "elapsed_s": 3.7933
+    },
+    {
+      "question_id": "60bf93ed_abs",
+      "question_type": "multi-session",
+      "context_tokens": 5922,
+      "prompt_tokens": 6711,
+      "completion_tokens": 68,
+      "truncated": false,
+      "elapsed_s": 3.6132
+    },
+    {
+      "question_id": "edced276_abs",
+      "question_type": "multi-session",
+      "context_tokens": 5718,
+      "prompt_tokens": 6631,
+      "completion_tokens": 78,
+      "truncated": false,
+      "elapsed_s": 3.7606
+    },
+    {
+      "question_id": "gpt4_372c3eed_abs",
+      "question_type": "multi-session",
+      "context_tokens": 11426,
+      "prompt_tokens": 12853,
+      "completion_tokens": 246,
+      "truncated": false,
+      "elapsed_s": 7.8088
+    },
+    {
+      "question_id": "6a1eabeb",
+      "question_type": "knowledge-update",
+      "context_tokens": 7413,
+      "prompt_tokens": 8313,
+      "completion_tokens": 26,
+      "truncated": false,
+      "elapsed_s": 2.0877
+    },
+    {
+      "question_id": "6aeb4375",
+      "question_type": "knowledge-update",
+      "context_tokens": 4984,
+      "prompt_tokens": 5983,
+      "completion_tokens": 88,
+      "truncated": false,
+      "elapsed_s": 3.3505
+    },
+    {
+      "question_id": "830ce83f",
+      "question_type": "knowledge-update",
+      "context_tokens": 5017,
+      "prompt_tokens": 5795,
+      "completion_tokens": 124,
+      "truncated": false,
+      "elapsed_s": 5.503
+    },
+    {
+      "question_id": "852ce960",
+      "question_type": "knowledge-update",
+      "context_tokens": 5747,
+      "prompt_tokens": 6465,
+      "completion_tokens": 133,
+      "truncated": false,
+      "elapsed_s": 5.0659
+    },
+    {
+      "question_id": "945e3d21",
+      "question_type": "knowledge-update",
+      "context_tokens": 6111,
+      "prompt_tokens": 6880,
+      "completion_tokens": 49,
+      "truncated": false,
+      "elapsed_s": 2.5078
+    },
+    {
+      "question_id": "d7c942c3",
+      "question_type": "knowledge-update",
+      "context_tokens": 4927,
+      "prompt_tokens": 6152,
+      "completion_tokens": 67,
+      "truncated": false,
+      "elapsed_s": 2.9007
+    },
+    {
+      "question_id": "71315a70",
+      "question_type": "knowledge-update",
+      "context_tokens": 7484,
+      "prompt_tokens": 8424,
+      "completion_tokens": 28,
+      "truncated": false,
+      "elapsed_s": 2.0661
+    },
+    {
+      "question_id": "89941a93",
+      "question_type": "knowledge-update",
+      "context_tokens": 6797,
+      "prompt_tokens": 7830,
+      "completion_tokens": 80,
+      "truncated": false,
+      "elapsed_s": 3.0769
+    },
+    {
+      "question_id": "ce6d2d27",
+      "question_type": "knowledge-update",
+      "context_tokens": 5310,
+      "prompt_tokens": 6872,
+      "completion_tokens": 103,
+      "truncated": false,
+      "elapsed_s": 3.4074
+    },
+    {
+      "question_id": "9ea5eabc",
+      "question_type": "knowledge-update",
+      "context_tokens": 7129,
+      "prompt_tokens": 8220,
+      "completion_tokens": 80,
+      "truncated": false,
+      "elapsed_s": 3.5209
+    },
+    {
+      "question_id": "07741c44",
+      "question_type": "knowledge-update",
+      "context_tokens": 5563,
+      "prompt_tokens": 6368,
+      "completion_tokens": 53,
+      "truncated": false,
+      "elapsed_s": 2.9991
+    },
+    {
+      "question_id": "a1eacc2a",
+      "question_type": "knowledge-update",
+      "context_tokens": 6934,
+      "prompt_tokens": 7571,
+      "completion_tokens": 46,
+      "truncated": false,
+      "elapsed_s": 2.4532
+    },
+    {
+      "question_id": "184da446",
+      "question_type": "knowledge-update",
+      "context_tokens": 8166,
+      "prompt_tokens": 9148,
+      "completion_tokens": 29,
+      "truncated": false,
+      "elapsed_s": 2.1051
+    },
+    {
+      "question_id": "031748ae",
+      "question_type": "knowledge-update",
+      "context_tokens": 5118,
+      "prompt_tokens": 5872,
+      "completion_tokens": 136,
+      "truncated": false,
+      "elapsed_s": 4.1477
+    },
+    {
+      "question_id": "4d6b87c8",
+      "question_type": "knowledge-update",
+      "context_tokens": 6035,
+      "prompt_tokens": 6728,
+      "completion_tokens": 41,
+      "truncated": false,
+      "elapsed_s": 3.0898
+    },
+    {
+      "question_id": "0f05491a",
+      "question_type": "knowledge-update",
+      "context_tokens": 3876,
+      "prompt_tokens": 4643,
+      "completion_tokens": 58,
+      "truncated": false,
+      "elapsed_s": 2.6846
+    },
+    {
+      "question_id": "08e075c7",
+      "question_type": "knowledge-update",
+      "context_tokens": 6020,
+      "prompt_tokens": 6963,
+      "completion_tokens": 132,
+      "truncated": false,
+      "elapsed_s": 4.5368
+    },
+    {
+      "question_id": "f9e8c073",
+      "question_type": "knowledge-update",
+      "context_tokens": 7023,
+      "prompt_tokens": 7781,
+      "completion_tokens": 114,
+      "truncated": false,
+      "elapsed_s": 4.1412
+    },
+    {
+      "question_id": "41698283",
+      "question_type": "knowledge-update",
+      "context_tokens": 6929,
+      "prompt_tokens": 8012,
+      "completion_tokens": 57,
+      "truncated": false,
+      "elapsed_s": 3.7157
+    },
+    {
+      "question_id": "2698e78f",
+      "question_type": "knowledge-update",
+      "context_tokens": 5840,
+      "prompt_tokens": 6649,
+      "completion_tokens": 65,
+      "truncated": false,
+      "elapsed_s": 3.2019
+    },
+    {
+      "question_id": "b6019101",
+      "question_type": "knowledge-update",
+      "context_tokens": 5199,
+      "prompt_tokens": 6004,
+      "completion_tokens": 41,
+      "truncated": false,
+      "elapsed_s": 3.308
+    },
+    {
+      "question_id": "45dc21b6",
+      "question_type": "knowledge-update",
+      "context_tokens": 6076,
+      "prompt_tokens": 7279,
+      "completion_tokens": 54,
+      "truncated": false,
+      "elapsed_s": 2.8762
+    },
+    {
+      "question_id": "5a4f22c0",
+      "question_type": "knowledge-update",
+      "context_tokens": 5773,
+      "prompt_tokens": 6479,
+      "completion_tokens": 77,
+      "truncated": false,
+      "elapsed_s": 3.2155
+    },
+    {
+      "question_id": "6071bd76",
+      "question_type": "knowledge-update",
+      "context_tokens": 4721,
+      "prompt_tokens": 5513,
+      "completion_tokens": 149,
+      "truncated": false,
+      "elapsed_s": 3.6209
+    },
+    {
+      "question_id": "e493bb7c",
+      "question_type": "knowledge-update",
+      "context_tokens": 6475,
+      "prompt_tokens": 7358,
+      "completion_tokens": 120,
+      "truncated": false,
+      "elapsed_s": 4.3578
+    },
+    {
+      "question_id": "618f13b2",
+      "question_type": "knowledge-update",
+      "context_tokens": 5702,
+      "prompt_tokens": 6617,
+      "completion_tokens": 75,
+      "truncated": false,
+      "elapsed_s": 3.1166
+    },
+    {
+      "question_id": "72e3ee87",
+      "question_type": "knowledge-update",
+      "context_tokens": 6251,
+      "prompt_tokens": 7060,
+      "completion_tokens": 26,
+      "truncated": false,
+      "elapsed_s": 2.1576
+    },
+    {
+      "question_id": "c4ea545c",
+      "question_type": "knowledge-update",
+      "context_tokens": 5444,
+      "prompt_tokens": 6599,
+      "completion_tokens": 144,
+      "truncated": false,
+      "elapsed_s": 4.8173
+    },
+    {
+      "question_id": "01493427",
+      "question_type": "knowledge-update",
+      "context_tokens": 6247,
+      "prompt_tokens": 7181,
+      "completion_tokens": 114,
+      "truncated": false,
+      "elapsed_s": 3.5111
+    },
+    {
+      "question_id": "6a27ffc2",
+      "question_type": "knowledge-update",
+      "context_tokens": 8419,
+      "prompt_tokens": 9592,
+      "completion_tokens": 29,
+      "truncated": false,
+      "elapsed_s": 2.2775
+    },
+    {
+      "question_id": "2133c1b5",
+      "question_type": "knowledge-update",
+      "context_tokens": 5344,
+      "prompt_tokens": 6212,
+      "completion_tokens": 131,
+      "truncated": false,
+      "elapsed_s": 3.9747
+    },
+    {
+      "question_id": "18bc8abd",
+      "question_type": "knowledge-update",
+      "context_tokens": 7367,
+      "prompt_tokens": 8957,
+      "completion_tokens": 46,
+      "truncated": false,
+      "elapsed_s": 2.5382
+    },
+    {
+      "question_id": "db467c8c",
+      "question_type": "knowledge-update",
+      "context_tokens": 7312,
+      "prompt_tokens": 8254,
+      "completion_tokens": 24,
+      "truncated": false,
+      "elapsed_s": 1.8417
+    },
+    {
+      "question_id": "7a87bd0c",
+      "question_type": "knowledge-update",
+      "context_tokens": 6075,
+      "prompt_tokens": 6759,
+      "completion_tokens": 125,
+      "truncated": false,
+      "elapsed_s": 3.6369
+    },
+    {
+      "question_id": "e61a7584",
+      "question_type": "knowledge-update",
+      "context_tokens": 5597,
+      "prompt_tokens": 6376,
+      "completion_tokens": 55,
+      "truncated": false,
+      "elapsed_s": 3.4921
+    },
+    {
+      "question_id": "1cea1afa",
+      "question_type": "knowledge-update",
+      "context_tokens": 6520,
+      "prompt_tokens": 7318,
+      "completion_tokens": 57,
+      "truncated": false,
+      "elapsed_s": 2.3606
+    },
+    {
+      "question_id": "ed4ddc30",
+      "question_type": "knowledge-update",
+      "context_tokens": 7510,
+      "prompt_tokens": 8928,
+      "completion_tokens": 45,
+      "truncated": false,
+      "elapsed_s": 2.3089
+    },
+    {
+      "question_id": "8fb83627",
+      "question_type": "knowledge-update",
+      "context_tokens": 5065,
+      "prompt_tokens": 5735,
+      "completion_tokens": 78,
+      "truncated": false,
+      "elapsed_s": 3.1581
+    },
+    {
+      "question_id": "b01defab",
+      "question_type": "knowledge-update",
+      "context_tokens": 5025,
+      "prompt_tokens": 5794,
+      "completion_tokens": 103,
+      "truncated": false,
+      "elapsed_s": 3.4064
+    },
+    {
+      "question_id": "22d2cb42",
+      "question_type": "knowledge-update",
+      "context_tokens": 5025,
+      "prompt_tokens": 5587,
+      "completion_tokens": 28,
+      "truncated": false,
+      "elapsed_s": 2.1056
+    },
+    {
+      "question_id": "0e4e4c46",
+      "question_type": "knowledge-update",
+      "context_tokens": 6534,
+      "prompt_tokens": 7413,
+      "completion_tokens": 42,
+      "truncated": false,
+      "elapsed_s": 2.7982
+    },
+    {
+      "question_id": "4b24c848",
+      "question_type": "knowledge-update",
+      "context_tokens": 4513,
+      "prompt_tokens": 5144,
+      "completion_tokens": 79,
+      "truncated": false,
+      "elapsed_s": 3.1269
+    },
+    {
+      "question_id": "7e974930",
+      "question_type": "knowledge-update",
+      "context_tokens": 4366,
+      "prompt_tokens": 4907,
+      "completion_tokens": 43,
+      "truncated": false,
+      "elapsed_s": 2.9093
+    },
+    {
+      "question_id": "603deb26",
+      "question_type": "knowledge-update",
+      "context_tokens": 6559,
+      "prompt_tokens": 7903,
+      "completion_tokens": 36,
+      "truncated": false,
+      "elapsed_s": 2.1899
+    },
+    {
+      "question_id": "59524333",
+      "question_type": "knowledge-update",
+      "context_tokens": 5100,
+      "prompt_tokens": 5673,
+      "completion_tokens": 37,
+      "truncated": false,
+      "elapsed_s": 2.0421
+    },
+    {
+      "question_id": "5831f84d",
+      "question_type": "knowledge-update",
+      "context_tokens": 6206,
+      "prompt_tokens": 7090,
+      "completion_tokens": 93,
+      "truncated": false,
+      "elapsed_s": 3.9025
+    },
+    {
+      "question_id": "eace081b",
+      "question_type": "knowledge-update",
+      "context_tokens": 6377,
+      "prompt_tokens": 7639,
+      "completion_tokens": 27,
+      "truncated": false,
+      "elapsed_s": 2.0961
+    },
+    {
+      "question_id": "affe2881",
+      "question_type": "knowledge-update",
+      "context_tokens": 6177,
+      "prompt_tokens": 7040,
+      "completion_tokens": 69,
+      "truncated": false,
+      "elapsed_s": 3.0705
+    },
+    {
+      "question_id": "50635ada",
+      "question_type": "knowledge-update",
+      "context_tokens": 5591,
+      "prompt_tokens": 6379,
+      "completion_tokens": 86,
+      "truncated": false,
+      "elapsed_s": 3.7859
+    },
+    {
+      "question_id": "e66b632c",
+      "question_type": "knowledge-update",
+      "context_tokens": 6353,
+      "prompt_tokens": 7085,
+      "completion_tokens": 109,
+      "truncated": false,
+      "elapsed_s": 3.919
+    },
+    {
+      "question_id": "0ddfec37",
+      "question_type": "knowledge-update",
+      "context_tokens": 5412,
+      "prompt_tokens": 6231,
+      "completion_tokens": 45,
+      "truncated": false,
+      "elapsed_s": 2.0025
+    },
+    {
+      "question_id": "f685340e",
+      "question_type": "knowledge-update",
+      "context_tokens": 4720,
+      "prompt_tokens": 5385,
+      "completion_tokens": 115,
+      "truncated": false,
+      "elapsed_s": 3.7491
+    },
+    {
+      "question_id": "cc5ded98",
+      "question_type": "knowledge-update",
+      "context_tokens": 6129,
+      "prompt_tokens": 6732,
+      "completion_tokens": 87,
+      "truncated": false,
+      "elapsed_s": 3.7991
+    },
+    {
+      "question_id": "dfde3500",
+      "question_type": "knowledge-update",
+      "context_tokens": 4656,
+      "prompt_tokens": 5497,
+      "completion_tokens": 57,
+      "truncated": false,
+      "elapsed_s": 3.0317
+    },
+    {
+      "question_id": "69fee5aa",
+      "question_type": "knowledge-update",
+      "context_tokens": 6085,
+      "prompt_tokens": 6851,
+      "completion_tokens": 44,
+      "truncated": false,
+      "elapsed_s": 2.4113
+    },
+    {
+      "question_id": "7401057b",
+      "question_type": "knowledge-update",
+      "context_tokens": 6420,
+      "prompt_tokens": 7974,
+      "completion_tokens": 58,
+      "truncated": false,
+      "elapsed_s": 3.0778
+    },
+    {
+      "question_id": "cf22b7bf",
+      "question_type": "knowledge-update",
+      "context_tokens": 7443,
+      "prompt_tokens": 8406,
+      "completion_tokens": 56,
+      "truncated": false,
+      "elapsed_s": 3.1373
+    },
+    {
+      "question_id": "a2f3aa27",
+      "question_type": "knowledge-update",
+      "context_tokens": 5286,
+      "prompt_tokens": 5933,
+      "completion_tokens": 103,
+      "truncated": false,
+      "elapsed_s": 3.6447
+    },
+    {
+      "question_id": "c7dc5443",
+      "question_type": "knowledge-update",
+      "context_tokens": 6695,
+      "prompt_tokens": 7555,
+      "completion_tokens": 39,
+      "truncated": false,
+      "elapsed_s": 2.3468
+    },
+    {
+      "question_id": "06db6396",
+      "question_type": "knowledge-update",
+      "context_tokens": 6918,
+      "prompt_tokens": 7813,
+      "completion_tokens": 71,
+      "truncated": false,
+      "elapsed_s": 3.6651
+    },
+    {
+      "question_id": "3ba21379",
+      "question_type": "knowledge-update",
+      "context_tokens": 9037,
+      "prompt_tokens": 10263,
+      "completion_tokens": 78,
+      "truncated": false,
+      "elapsed_s": 3.6784
+    },
+    {
+      "question_id": "9bbe84a2",
+      "question_type": "knowledge-update",
+      "context_tokens": 5959,
+      "prompt_tokens": 6874,
+      "completion_tokens": 76,
+      "truncated": false,
+      "elapsed_s": 3.0598
+    },
+    {
+      "question_id": "10e09553",
+      "question_type": "knowledge-update",
+      "context_tokens": 5313,
+      "prompt_tokens": 6014,
+      "completion_tokens": 101,
+      "truncated": false,
+      "elapsed_s": 3.3872
+    },
+    {
+      "question_id": "dad224aa",
+      "question_type": "knowledge-update",
+      "context_tokens": 5561,
+      "prompt_tokens": 6341,
+      "completion_tokens": 54,
+      "truncated": false,
+      "elapsed_s": 3.1789
+    },
+    {
+      "question_id": "ba61f0b9",
+      "question_type": "knowledge-update",
+      "context_tokens": 6059,
+      "prompt_tokens": 6862,
+      "completion_tokens": 149,
+      "truncated": false,
+      "elapsed_s": 5.4409
+    },
+    {
+      "question_id": "42ec0761",
+      "question_type": "knowledge-update",
+      "context_tokens": 5706,
+      "prompt_tokens": 6518,
+      "completion_tokens": 79,
+      "truncated": false,
+      "elapsed_s": 2.868
+    },
+    {
+      "question_id": "5c40ec5b",
+      "question_type": "knowledge-update",
+      "context_tokens": 4709,
+      "prompt_tokens": 5393,
+      "completion_tokens": 74,
+      "truncated": false,
+      "elapsed_s": 3.6959
+    },
+    {
+      "question_id": "c6853660",
+      "question_type": "knowledge-update",
+      "context_tokens": 5273,
+      "prompt_tokens": 6104,
+      "completion_tokens": 82,
+      "truncated": false,
+      "elapsed_s": 4.9482
+    },
+    {
+      "question_id": "26bdc477",
+      "question_type": "knowledge-update",
+      "context_tokens": 6498,
+      "prompt_tokens": 7357,
+      "completion_tokens": 56,
+      "truncated": false,
+      "elapsed_s": 3.1461
+    },
+    {
+      "question_id": "0977f2af",
+      "question_type": "knowledge-update",
+      "context_tokens": 5742,
+      "prompt_tokens": 7068,
+      "completion_tokens": 139,
+      "truncated": false,
+      "elapsed_s": 4.1357
+    },
+    {
+      "question_id": "6aeb4375_abs",
+      "question_type": "knowledge-update",
+      "context_tokens": 4986,
+      "prompt_tokens": 5987,
+      "completion_tokens": 61,
+      "truncated": false,
+      "elapsed_s": 3.5106
+    },
+    {
+      "question_id": "031748ae_abs",
+      "question_type": "knowledge-update",
+      "context_tokens": 5120,
+      "prompt_tokens": 5868,
+      "completion_tokens": 150,
+      "truncated": false,
+      "elapsed_s": 5.5752
+    },
+    {
+      "question_id": "2698e78f_abs",
+      "question_type": "knowledge-update",
+      "context_tokens": 5842,
+      "prompt_tokens": 6648,
+      "completion_tokens": 93,
+      "truncated": false,
+      "elapsed_s": 3.6047
+    },
+    {
+      "question_id": "2133c1b5_abs",
+      "question_type": "knowledge-update",
+      "context_tokens": 5346,
+      "prompt_tokens": 6216,
+      "completion_tokens": 107,
+      "truncated": false,
+      "elapsed_s": 3.8636
+    },
+    {
+      "question_id": "0ddfec37_abs",
+      "question_type": "knowledge-update",
+      "context_tokens": 5414,
+      "prompt_tokens": 6231,
+      "completion_tokens": 108,
+      "truncated": false,
+      "elapsed_s": 3.5896
+    },
+    {
+      "question_id": "f685340e_abs",
+      "question_type": "knowledge-update",
+      "context_tokens": 4722,
+      "prompt_tokens": 5381,
+      "completion_tokens": 57,
+      "truncated": false,
+      "elapsed_s": 2.5788
+    },
+    {
+      "question_id": "89941a94",
+      "question_type": "knowledge-update",
+      "context_tokens": 6797,
+      "prompt_tokens": 7847,
+      "completion_tokens": 143,
+      "truncated": false,
+      "elapsed_s": 4.6942
+    },
+    {
+      "question_id": "07741c45",
+      "question_type": "knowledge-update",
+      "context_tokens": 5563,
+      "prompt_tokens": 6369,
+      "completion_tokens": 88,
+      "truncated": false,
+      "elapsed_s": 3.1129
+    },
+    {
+      "question_id": "8a2466db",
+      "question_type": "single-session-preference",
+      "context_tokens": 5345,
+      "prompt_tokens": 5979,
+      "completion_tokens": 240,
+      "truncated": false,
+      "elapsed_s": 6.7747
+    },
+    {
+      "question_id": "06878be2",
+      "question_type": "single-session-preference",
+      "context_tokens": 4445,
+      "prompt_tokens": 5075,
+      "completion_tokens": 470,
+      "truncated": false,
+      "elapsed_s": 11.2552
+    },
+    {
+      "question_id": "75832dbd",
+      "question_type": "single-session-preference",
+      "context_tokens": 3884,
+      "prompt_tokens": 4575,
+      "completion_tokens": 405,
+      "truncated": false,
+      "elapsed_s": 9.2603
+    },
+    {
+      "question_id": "0edc2aef",
+      "question_type": "single-session-preference",
+      "context_tokens": 3731,
+      "prompt_tokens": 4528,
+      "completion_tokens": 192,
+      "truncated": false,
+      "elapsed_s": 4.6835
+    },
+    {
+      "question_id": "35a27287",
+      "question_type": "single-session-preference",
+      "context_tokens": 4245,
+      "prompt_tokens": 4676,
+      "completion_tokens": 230,
+      "truncated": false,
+      "elapsed_s": 5.8732
+    },
+    {
+      "question_id": "32260d93",
+      "question_type": "single-session-preference",
+      "context_tokens": 3522,
+      "prompt_tokens": 3936,
+      "completion_tokens": 181,
+      "truncated": false,
+      "elapsed_s": 4.6939
+    },
+    {
+      "question_id": "195a1a1b",
+      "question_type": "single-session-preference",
+      "context_tokens": 3990,
+      "prompt_tokens": 4600,
+      "completion_tokens": 407,
+      "truncated": false,
+      "elapsed_s": 9.3731
+    },
+    {
+      "question_id": "afdc33df",
+      "question_type": "single-session-preference",
+      "context_tokens": 4574,
+      "prompt_tokens": 5632,
+      "completion_tokens": 285,
+      "truncated": false,
+      "elapsed_s": 7.7358
+    },
+    {
+      "question_id": "caf03d32",
+      "question_type": "single-session-preference",
+      "context_tokens": 4588,
+      "prompt_tokens": 5682,
+      "completion_tokens": 335,
+      "truncated": false,
+      "elapsed_s": 8.3646
+    },
+    {
+      "question_id": "54026fce",
+      "question_type": "single-session-preference",
+      "context_tokens": 2920,
+      "prompt_tokens": 3270,
+      "completion_tokens": 226,
+      "truncated": false,
+      "elapsed_s": 6.6928
+    },
+    {
+      "question_id": "06f04340",
+      "question_type": "single-session-preference",
+      "context_tokens": 3979,
+      "prompt_tokens": 4729,
+      "completion_tokens": 392,
+      "truncated": false,
+      "elapsed_s": 9.6825
+    },
+    {
+      "question_id": "6b7dfb22",
+      "question_type": "single-session-preference",
+      "context_tokens": 4545,
+      "prompt_tokens": 5256,
+      "completion_tokens": 354,
+      "truncated": false,
+      "elapsed_s": 9.5407
+    },
+    {
+      "question_id": "1a1907b4",
+      "question_type": "single-session-preference",
+      "context_tokens": 3689,
+      "prompt_tokens": 4593,
+      "completion_tokens": 234,
+      "truncated": false,
+      "elapsed_s": 6.6189
+    },
+    {
+      "question_id": "09d032c9",
+      "question_type": "single-session-preference",
+      "context_tokens": 6043,
+      "prompt_tokens": 7011,
+      "completion_tokens": 110,
+      "truncated": false,
+      "elapsed_s": 4.6178
+    },
+    {
+      "question_id": "38146c39",
+      "question_type": "single-session-preference",
+      "context_tokens": 4454,
+      "prompt_tokens": 5317,
+      "completion_tokens": 136,
+      "truncated": false,
+      "elapsed_s": 4.5141
+    },
+    {
+      "question_id": "d24813b1",
+      "question_type": "single-session-preference",
+      "context_tokens": 4189,
+      "prompt_tokens": 5193,
+      "completion_tokens": 302,
+      "truncated": false,
+      "elapsed_s": 8.552
+    },
+    {
+      "question_id": "57f827a0",
+      "question_type": "single-session-preference",
+      "context_tokens": 3456,
+      "prompt_tokens": 4141,
+      "completion_tokens": 306,
+      "truncated": false,
+      "elapsed_s": 8.5021
+    },
+    {
+      "question_id": "95228167",
+      "question_type": "single-session-preference",
+      "context_tokens": 3337,
+      "prompt_tokens": 3856,
+      "completion_tokens": 363,
+      "truncated": false,
+      "elapsed_s": 10.0176
+    },
+    {
+      "question_id": "505af2f5",
+      "question_type": "single-session-preference",
+      "context_tokens": 3707,
+      "prompt_tokens": 4432,
+      "completion_tokens": 291,
+      "truncated": false,
+      "elapsed_s": 7.5704
+    },
+    {
+      "question_id": "75f70248",
+      "question_type": "single-session-preference",
+      "context_tokens": 3689,
+      "prompt_tokens": 4302,
+      "completion_tokens": 327,
+      "truncated": false,
+      "elapsed_s": 8.4171
+    },
+    {
+      "question_id": "d6233ab6",
+      "question_type": "single-session-preference",
+      "context_tokens": 2697,
+      "prompt_tokens": 3137,
+      "completion_tokens": 197,
+      "truncated": false,
+      "elapsed_s": 5.5159
+    },
+    {
+      "question_id": "1da05512",
+      "question_type": "single-session-preference",
+      "context_tokens": 4323,
+      "prompt_tokens": 4965,
+      "completion_tokens": 392,
+      "truncated": false,
+      "elapsed_s": 11.0664
+    },
+    {
+      "question_id": "fca70973",
+      "question_type": "single-session-preference",
+      "context_tokens": 3277,
+      "prompt_tokens": 4021,
+      "completion_tokens": 305,
+      "truncated": false,
+      "elapsed_s": 8.8645
+    },
+    {
+      "question_id": "b6025781",
+      "question_type": "single-session-preference",
+      "context_tokens": 2711,
+      "prompt_tokens": 3493,
+      "completion_tokens": 320,
+      "truncated": false,
+      "elapsed_s": 8.0917
+    },
+    {
+      "question_id": "a89d7624",
+      "question_type": "single-session-preference",
+      "context_tokens": 2930,
+      "prompt_tokens": 3437,
+      "completion_tokens": 330,
+      "truncated": false,
+      "elapsed_s": 7.7341
+    },
+    {
+      "question_id": "b0479f84",
+      "question_type": "single-session-preference",
+      "context_tokens": 3649,
+      "prompt_tokens": 4351,
+      "completion_tokens": 279,
+      "truncated": false,
+      "elapsed_s": 7.8637
+    },
+    {
+      "question_id": "1d4e3b97",
+      "question_type": "single-session-preference",
+      "context_tokens": 3360,
+      "prompt_tokens": 3876,
+      "completion_tokens": 266,
+      "truncated": false,
+      "elapsed_s": 7.5274
+    },
+    {
+      "question_id": "07b6f563",
+      "question_type": "single-session-preference",
+      "context_tokens": 4080,
+      "prompt_tokens": 4613,
+      "completion_tokens": 337,
+      "truncated": false,
+      "elapsed_s": 8.6313
+    },
+    {
+      "question_id": "1c0ddc50",
+      "question_type": "single-session-preference",
+      "context_tokens": 3785,
+      "prompt_tokens": 4377,
+      "completion_tokens": 303,
+      "truncated": false,
+      "elapsed_s": 8.9801
+    },
+    {
+      "question_id": "0a34ad58",
+      "question_type": "single-session-preference",
+      "context_tokens": 5104,
+      "prompt_tokens": 6102,
+      "completion_tokens": 412,
+      "truncated": false,
+      "elapsed_s": 10.0868
+    },
+    {
+      "question_id": "7161e7e2",
+      "question_type": "single-session-assistant",
+      "context_tokens": 2065,
+      "prompt_tokens": 2599,
+      "completion_tokens": 34,
+      "truncated": false,
+      "elapsed_s": 2.6424
+    },
+    {
+      "question_id": "c4f10528",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1589,
+      "prompt_tokens": 1985,
+      "completion_tokens": 76,
+      "truncated": false,
+      "elapsed_s": 6.4262
+    },
+    {
+      "question_id": "89527b6b",
+      "question_type": "single-session-assistant",
+      "context_tokens": 665,
+      "prompt_tokens": 859,
+      "completion_tokens": 26,
+      "truncated": false,
+      "elapsed_s": 1.5216
+    },
+    {
+      "question_id": "e9327a54",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1946,
+      "prompt_tokens": 2443,
+      "completion_tokens": 61,
+      "truncated": false,
+      "elapsed_s": 2.5364
+    },
+    {
+      "question_id": "4c36ccef",
+      "question_type": "single-session-assistant",
+      "context_tokens": 671,
+      "prompt_tokens": 876,
+      "completion_tokens": 19,
+      "truncated": false,
+      "elapsed_s": 1.6841
+    },
+    {
+      "question_id": "6ae235be",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1545,
+      "prompt_tokens": 1911,
+      "completion_tokens": 142,
+      "truncated": false,
+      "elapsed_s": 3.3179
+    },
+    {
+      "question_id": "7e00a6cb",
+      "question_type": "single-session-assistant",
+      "context_tokens": 722,
+      "prompt_tokens": 931,
+      "completion_tokens": 64,
+      "truncated": false,
+      "elapsed_s": 3.0306
+    },
+    {
+      "question_id": "1903aded",
+      "question_type": "single-session-assistant",
+      "context_tokens": 143,
+      "prompt_tokens": 279,
+      "completion_tokens": 24,
+      "truncated": false,
+      "elapsed_s": 1.6414
+    },
+    {
+      "question_id": "ceb54acb",
+      "question_type": "single-session-assistant",
+      "context_tokens": 240,
+      "prompt_tokens": 402,
+      "completion_tokens": 46,
+      "truncated": false,
+      "elapsed_s": 2.4887
+    },
+    {
+      "question_id": "f523d9fe",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1111,
+      "prompt_tokens": 1300,
+      "completion_tokens": 40,
+      "truncated": false,
+      "elapsed_s": 2.7796
+    },
+    {
+      "question_id": "0e5e2d1a",
+      "question_type": "single-session-assistant",
+      "context_tokens": 595,
+      "prompt_tokens": 791,
+      "completion_tokens": 55,
+      "truncated": false,
+      "elapsed_s": 1.8161
+    },
+    {
+      "question_id": "fea54f57",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1507,
+      "prompt_tokens": 1814,
+      "completion_tokens": 82,
+      "truncated": false,
+      "elapsed_s": 2.9407
+    },
+    {
+      "question_id": "cc539528",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1126,
+      "prompt_tokens": 1389,
+      "completion_tokens": 56,
+      "truncated": false,
+      "elapsed_s": 2.986
+    },
+    {
+      "question_id": "dc439ea3",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1014,
+      "prompt_tokens": 1265,
+      "completion_tokens": 44,
+      "truncated": false,
+      "elapsed_s": 2.4952
+    },
+    {
+      "question_id": "18dcd5a5",
+      "question_type": "single-session-assistant",
+      "context_tokens": 868,
+      "prompt_tokens": 1141,
+      "completion_tokens": 32,
+      "truncated": false,
+      "elapsed_s": 1.71
+    },
+    {
+      "question_id": "488d3006",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1251,
+      "prompt_tokens": 1528,
+      "completion_tokens": 80,
+      "truncated": false,
+      "elapsed_s": 2.389
+    },
+    {
+      "question_id": "58470ed2",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1088,
+      "prompt_tokens": 1308,
+      "completion_tokens": 98,
+      "truncated": false,
+      "elapsed_s": 3.9648
+    },
+    {
+      "question_id": "8cf51dda",
+      "question_type": "single-session-assistant",
+      "context_tokens": 410,
+      "prompt_tokens": 580,
+      "completion_tokens": 101,
+      "truncated": false,
+      "elapsed_s": 2.3474
+    },
+    {
+      "question_id": "1d4da289",
+      "question_type": "single-session-assistant",
+      "context_tokens": 670,
+      "prompt_tokens": 863,
+      "completion_tokens": 66,
+      "truncated": false,
+      "elapsed_s": 2.5243
+    },
+    {
+      "question_id": "8464fc84",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1109,
+      "prompt_tokens": 1367,
+      "completion_tokens": 39,
+      "truncated": false,
+      "elapsed_s": 1.6819
+    },
+    {
+      "question_id": "8aef76bc",
+      "question_type": "single-session-assistant",
+      "context_tokens": 796,
+      "prompt_tokens": 1059,
+      "completion_tokens": 32,
+      "truncated": false,
+      "elapsed_s": 1.9237
+    },
+    {
+      "question_id": "71a3fd6b",
+      "question_type": "single-session-assistant",
+      "context_tokens": 472,
+      "prompt_tokens": 652,
+      "completion_tokens": 56,
+      "truncated": false,
+      "elapsed_s": 2.3475
+    },
+    {
+      "question_id": "2bf43736",
+      "question_type": "single-session-assistant",
+      "context_tokens": 2018,
+      "prompt_tokens": 2373,
+      "completion_tokens": 105,
+      "truncated": false,
+      "elapsed_s": 2.6018
+    },
+    {
+      "question_id": "70b3e69b",
+      "question_type": "single-session-assistant",
+      "context_tokens": 2215,
+      "prompt_tokens": 2454,
+      "completion_tokens": 82,
+      "truncated": false,
+      "elapsed_s": 2.5438
+    },
+    {
+      "question_id": "8752c811",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1705,
+      "prompt_tokens": 2145,
+      "completion_tokens": 44,
+      "truncated": false,
+      "elapsed_s": 1.8837
+    },
+    {
+      "question_id": "3249768e",
+      "question_type": "single-session-assistant",
+      "context_tokens": 614,
+      "prompt_tokens": 875,
+      "completion_tokens": 82,
+      "truncated": false,
+      "elapsed_s": 2.8873
+    },
+    {
+      "question_id": "1b9b7252",
+      "question_type": "single-session-assistant",
+      "context_tokens": 974,
+      "prompt_tokens": 1227,
+      "completion_tokens": 43,
+      "truncated": false,
+      "elapsed_s": 1.9806
+    },
+    {
+      "question_id": "1568498a",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1844,
+      "prompt_tokens": 2488,
+      "completion_tokens": 27,
+      "truncated": false,
+      "elapsed_s": 1.5928
+    },
+    {
+      "question_id": "6222b6eb",
+      "question_type": "single-session-assistant",
+      "context_tokens": 2001,
+      "prompt_tokens": 2329,
+      "completion_tokens": 64,
+      "truncated": false,
+      "elapsed_s": 3.9198
+    },
+    {
+      "question_id": "e8a79c70",
+      "question_type": "single-session-assistant",
+      "context_tokens": 961,
+      "prompt_tokens": 1291,
+      "completion_tokens": 28,
+      "truncated": false,
+      "elapsed_s": 1.9726
+    },
+    {
+      "question_id": "d596882b",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1107,
+      "prompt_tokens": 1399,
+      "completion_tokens": 51,
+      "truncated": false,
+      "elapsed_s": 2.1434
+    },
+    {
+      "question_id": "e3fc4d6e",
+      "question_type": "single-session-assistant",
+      "context_tokens": 928,
+      "prompt_tokens": 1200,
+      "completion_tokens": 52,
+      "truncated": false,
+      "elapsed_s": 1.841
+    },
+    {
+      "question_id": "51b23612",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1401,
+      "prompt_tokens": 1663,
+      "completion_tokens": 36,
+      "truncated": false,
+      "elapsed_s": 2.1453
+    },
+    {
+      "question_id": "3e321797",
+      "question_type": "single-session-assistant",
+      "context_tokens": 591,
+      "prompt_tokens": 823,
+      "completion_tokens": 48,
+      "truncated": false,
+      "elapsed_s": 2.3045
+    },
+    {
+      "question_id": "e982271f",
+      "question_type": "single-session-assistant",
+      "context_tokens": 627,
+      "prompt_tokens": 810,
+      "completion_tokens": 31,
+      "truncated": false,
+      "elapsed_s": 1.9407
+    },
+    {
+      "question_id": "352ab8bd",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1948,
+      "prompt_tokens": 2321,
+      "completion_tokens": 37,
+      "truncated": false,
+      "elapsed_s": 1.9868
+    },
+    {
+      "question_id": "fca762bc",
+      "question_type": "single-session-assistant",
+      "context_tokens": 584,
+      "prompt_tokens": 780,
+      "completion_tokens": 38,
+      "truncated": false,
+      "elapsed_s": 2.4118
+    },
+    {
+      "question_id": "7a8d0b71",
+      "question_type": "single-session-assistant",
+      "context_tokens": 2053,
+      "prompt_tokens": 2568,
+      "completion_tokens": 61,
+      "truncated": false,
+      "elapsed_s": 2.2547
+    },
+    {
+      "question_id": "a40e080f",
+      "question_type": "single-session-assistant",
+      "context_tokens": 863,
+      "prompt_tokens": 1068,
+      "completion_tokens": 123,
+      "truncated": false,
+      "elapsed_s": 3.2599
+    },
+    {
+      "question_id": "8b9d4367",
+      "question_type": "single-session-assistant",
+      "context_tokens": 879,
+      "prompt_tokens": 1116,
+      "completion_tokens": 69,
+      "truncated": false,
+      "elapsed_s": 2.9158
+    },
+    {
+      "question_id": "5809eb10",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1989,
+      "prompt_tokens": 2364,
+      "completion_tokens": 20,
+      "truncated": false,
+      "elapsed_s": 2.0579
+    },
+    {
+      "question_id": "41275add",
+      "question_type": "single-session-assistant",
+      "context_tokens": 267,
+      "prompt_tokens": 445,
+      "completion_tokens": 87,
+      "truncated": false,
+      "elapsed_s": 2.3057
+    },
+    {
+      "question_id": "4388e9dd",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1160,
+      "prompt_tokens": 1449,
+      "completion_tokens": 23,
+      "truncated": false,
+      "elapsed_s": 1.6648
+    },
+    {
+      "question_id": "4baee567",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1563,
+      "prompt_tokens": 1841,
+      "completion_tokens": 102,
+      "truncated": false,
+      "elapsed_s": 2.9339
+    },
+    {
+      "question_id": "561fabcd",
+      "question_type": "single-session-assistant",
+      "context_tokens": 2008,
+      "prompt_tokens": 2365,
+      "completion_tokens": 66,
+      "truncated": false,
+      "elapsed_s": 3.366
+    },
+    {
+      "question_id": "b759caee",
+      "question_type": "single-session-assistant",
+      "context_tokens": 567,
+      "prompt_tokens": 729,
+      "completion_tokens": 42,
+      "truncated": false,
+      "elapsed_s": 2.2615
+    },
+    {
+      "question_id": "ac031881",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1905,
+      "prompt_tokens": 2162,
+      "completion_tokens": 56,
+      "truncated": false,
+      "elapsed_s": 2.8716
+    },
+    {
+      "question_id": "28bcfaac",
+      "question_type": "single-session-assistant",
+      "context_tokens": 669,
+      "prompt_tokens": 850,
+      "completion_tokens": 44,
+      "truncated": false,
+      "elapsed_s": 2.3125
+    },
+    {
+      "question_id": "16c90bf4",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1417,
+      "prompt_tokens": 1828,
+      "completion_tokens": 64,
+      "truncated": false,
+      "elapsed_s": 2.4542
+    },
+    {
+      "question_id": "c8f1aeed",
+      "question_type": "single-session-assistant",
+      "context_tokens": 933,
+      "prompt_tokens": 1185,
+      "completion_tokens": 45,
+      "truncated": false,
+      "elapsed_s": 1.9228
+    },
+    {
+      "question_id": "eaca4986",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1201,
+      "prompt_tokens": 1384,
+      "completion_tokens": 92,
+      "truncated": false,
+      "elapsed_s": 3.6002
+    },
+    {
+      "question_id": "c7cf7dfd",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1815,
+      "prompt_tokens": 2280,
+      "completion_tokens": 36,
+      "truncated": false,
+      "elapsed_s": 1.8539
+    },
+    {
+      "question_id": "e48988bc",
+      "question_type": "single-session-assistant",
+      "context_tokens": 662,
+      "prompt_tokens": 887,
+      "completion_tokens": 75,
+      "truncated": false,
+      "elapsed_s": 2.3451
+    },
+    {
+      "question_id": "1de5cff2",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1130,
+      "prompt_tokens": 1406,
+      "completion_tokens": 61,
+      "truncated": false,
+      "elapsed_s": 2.1077
+    },
+    {
+      "question_id": "65240037",
+      "question_type": "single-session-assistant",
+      "context_tokens": 1889,
+      "prompt_tokens": 2278,
+      "completion_tokens": 85,
+      "truncated": false,
+      "elapsed_s": 2.9328
+    },
+    {
+      "question_id": "778164c6",
+      "question_type": "single-session-assistant",
+      "context_tokens": 996,
+      "prompt_tokens": 1281,
+      "completion_tokens": 61,
+      "truncated": false,
+      "elapsed_s": 2.1724
+    },
+    {
+      "question_id": "e47becba",
+      "question_type": "single-session-user",
+      "context_tokens": 3735,
+      "prompt_tokens": 4229,
+      "completion_tokens": 18,
+      "truncated": false,
+      "elapsed_s": 5.7811
+    },
+    {
+      "question_id": "118b2229",
+      "question_type": "single-session-user",
+      "context_tokens": 2779,
+      "prompt_tokens": 3227,
+      "completion_tokens": 53,
+      "truncated": false,
+      "elapsed_s": 2.7607
+    },
+    {
+      "question_id": "51a45a95",
+      "question_type": "single-session-user",
+      "context_tokens": 2254,
+      "prompt_tokens": 2686,
+      "completion_tokens": 93,
+      "truncated": false,
+      "elapsed_s": 3.3726
+    },
+    {
+      "question_id": "58bf7951",
+      "question_type": "single-session-user",
+      "context_tokens": 2017,
+      "prompt_tokens": 2318,
+      "completion_tokens": 28,
+      "truncated": false,
+      "elapsed_s": 1.957
+    },
+    {
+      "question_id": "1e043500",
+      "question_type": "single-session-user",
+      "context_tokens": 2785,
+      "prompt_tokens": 3217,
+      "completion_tokens": 26,
+      "truncated": false,
+      "elapsed_s": 1.5234
+    },
+    {
+      "question_id": "c5e8278d",
+      "question_type": "single-session-user",
+      "context_tokens": 3236,
+      "prompt_tokens": 3584,
+      "completion_tokens": 41,
+      "truncated": false,
+      "elapsed_s": 2.4059
+    },
+    {
+      "question_id": "6ade9755",
+      "question_type": "single-session-user",
+      "context_tokens": 1906,
+      "prompt_tokens": 2238,
+      "completion_tokens": 63,
+      "truncated": false,
+      "elapsed_s": 2.8562
+    },
+    {
+      "question_id": "6f9b354f",
+      "question_type": "single-session-user",
+      "context_tokens": 3062,
+      "prompt_tokens": 3606,
+      "completion_tokens": 21,
+      "truncated": false,
+      "elapsed_s": 1.5786
+    },
+    {
+      "question_id": "58ef2f1c",
+      "question_type": "single-session-user",
+      "context_tokens": 2595,
+      "prompt_tokens": 3050,
+      "completion_tokens": 72,
+      "truncated": false,
+      "elapsed_s": 2.8486
+    },
+    {
+      "question_id": "f8c5f88b",
+      "question_type": "single-session-user",
+      "context_tokens": 2926,
+      "prompt_tokens": 3295,
+      "completion_tokens": 22,
+      "truncated": false,
+      "elapsed_s": 1.7164
+    },
+    {
+      "question_id": "5d3d2817",
+      "question_type": "single-session-user",
+      "context_tokens": 3403,
+      "prompt_tokens": 3833,
+      "completion_tokens": 53,
+      "truncated": false,
+      "elapsed_s": 2.9227
+    },
+    {
+      "question_id": "7527f7e2",
+      "question_type": "single-session-user",
+      "context_tokens": 3452,
+      "prompt_tokens": 3951,
+      "completion_tokens": 22,
+      "truncated": false,
+      "elapsed_s": 1.3034
+    },
+    {
+      "question_id": "c960da58",
+      "question_type": "single-session-user",
+      "context_tokens": 3410,
+      "prompt_tokens": 4042,
+      "completion_tokens": 66,
+      "truncated": false,
+      "elapsed_s": 3.0057
+    },
+    {
+      "question_id": "3b6f954b",
+      "question_type": "single-session-user",
+      "context_tokens": 2788,
+      "prompt_tokens": 3228,
+      "completion_tokens": 21,
+      "truncated": false,
+      "elapsed_s": 1.7442
+    },
+    {
+      "question_id": "726462e0",
+      "question_type": "single-session-user",
+      "context_tokens": 3294,
+      "prompt_tokens": 3697,
+      "completion_tokens": 32,
+      "truncated": false,
+      "elapsed_s": 2.1738
+    },
+    {
+      "question_id": "94f70d80",
+      "question_type": "single-session-user",
+      "context_tokens": 3006,
+      "prompt_tokens": 3452,
+      "completion_tokens": 30,
+      "truncated": false,
+      "elapsed_s": 1.7882
+    },
+    {
+      "question_id": "66f24dbb",
+      "question_type": "single-session-user",
+      "context_tokens": 1260,
+      "prompt_tokens": 1615,
+      "completion_tokens": 36,
+      "truncated": false,
+      "elapsed_s": 1.9233
+    },
+    {
+      "question_id": "ad7109d1",
+      "question_type": "single-session-user",
+      "context_tokens": 3201,
+      "prompt_tokens": 3632,
+      "completion_tokens": 50,
+      "truncated": false,
+      "elapsed_s": 2.6559
+    },
+    {
+      "question_id": "af8d2e46",
+      "question_type": "single-session-user",
+      "context_tokens": 2688,
+      "prompt_tokens": 3274,
+      "completion_tokens": 70,
+      "truncated": false,
+      "elapsed_s": 2.5371
+    },
+    {
+      "question_id": "dccbc061",
+      "question_type": "single-session-user",
+      "context_tokens": 4566,
+      "prompt_tokens": 4991,
+      "completion_tokens": 63,
+      "truncated": false,
+      "elapsed_s": 3.2371
+    },
+    {
+      "question_id": "c8c3f81d",
+      "question_type": "single-session-user",
+      "context_tokens": 2560,
+      "prompt_tokens": 3000,
+      "completion_tokens": 57,
+      "truncated": false,
+      "elapsed_s": 2.2302
+    },
+    {
+      "question_id": "8ebdbe50",
+      "question_type": "single-session-user",
+      "context_tokens": 3855,
+      "prompt_tokens": 4273,
+      "completion_tokens": 21,
+      "truncated": false,
+      "elapsed_s": 1.9875
+    },
+    {
+      "question_id": "6b168ec8",
+      "question_type": "single-session-user",
+      "context_tokens": 3503,
+      "prompt_tokens": 3978,
+      "completion_tokens": 34,
+      "truncated": false,
+      "elapsed_s": 1.6652
+    },
+    {
+      "question_id": "75499fd8",
+      "question_type": "single-session-user",
+      "context_tokens": 2951,
+      "prompt_tokens": 3415,
+      "completion_tokens": 20,
+      "truncated": false,
+      "elapsed_s": 1.7239
+    },
+    {
+      "question_id": "21436231",
+      "question_type": "single-session-user",
+      "context_tokens": 3675,
+      "prompt_tokens": 4249,
+      "completion_tokens": 30,
+      "truncated": false,
+      "elapsed_s": 2.0803
+    },
+    {
+      "question_id": "95bcc1c8",
+      "question_type": "single-session-user",
+      "context_tokens": 3542,
+      "prompt_tokens": 3967,
+      "completion_tokens": 44,
+      "truncated": false,
+      "elapsed_s": 2.2301
+    },
+    {
+      "question_id": "0862e8bf",
+      "question_type": "single-session-user",
+      "context_tokens": 2797,
+      "prompt_tokens": 3341,
+      "completion_tokens": 17,
+      "truncated": false,
+      "elapsed_s": 1.5694
+    },
+    {
+      "question_id": "853b0a1d",
+      "question_type": "single-session-user",
+      "context_tokens": 2446,
+      "prompt_tokens": 2839,
+      "completion_tokens": 26,
+      "truncated": false,
+      "elapsed_s": 1.7085
+    },
+    {
+      "question_id": "a06e4cfe",
+      "question_type": "single-session-user",
+      "context_tokens": 3268,
+      "prompt_tokens": 3909,
+      "completion_tokens": 81,
+      "truncated": false,
+      "elapsed_s": 3.0704
+    },
+    {
+      "question_id": "37d43f65",
+      "question_type": "single-session-user",
+      "context_tokens": 3236,
+      "prompt_tokens": 3687,
+      "completion_tokens": 20,
+      "truncated": false,
+      "elapsed_s": 1.9505
+    },
+    {
+      "question_id": "b86304ba",
+      "question_type": "single-session-user",
+      "context_tokens": 2348,
+      "prompt_tokens": 2694,
+      "completion_tokens": 85,
+      "truncated": false,
+      "elapsed_s": 3.4496
+    },
+    {
+      "question_id": "d52b4f67",
+      "question_type": "single-session-user",
+      "context_tokens": 2100,
+      "prompt_tokens": 2532,
+      "completion_tokens": 24,
+      "truncated": false,
+      "elapsed_s": 2.194
+    },
+    {
+      "question_id": "25e5aa4f",
+      "question_type": "single-session-user",
+      "context_tokens": 3869,
+      "prompt_tokens": 4343,
+      "completion_tokens": 27,
+      "truncated": false,
+      "elapsed_s": 2.2969
+    },
+    {
+      "question_id": "caf9ead2",
+      "question_type": "single-session-user",
+      "context_tokens": 1593,
+      "prompt_tokens": 1869,
+      "completion_tokens": 58,
+      "truncated": false,
+      "elapsed_s": 5.3741
+    },
+    {
+      "question_id": "8550ddae",
+      "question_type": "single-session-user",
+      "context_tokens": 3434,
+      "prompt_tokens": 4187,
+      "completion_tokens": 51,
+      "truncated": false,
+      "elapsed_s": 2.3093
+    },
+    {
+      "question_id": "60d45044",
+      "question_type": "single-session-user",
+      "context_tokens": 3153,
+      "prompt_tokens": 3849,
+      "completion_tokens": 39,
+      "truncated": false,
+      "elapsed_s": 1.9901
+    },
+    {
+      "question_id": "3f1e9474",
+      "question_type": "single-session-user",
+      "context_tokens": 3946,
+      "prompt_tokens": 4387,
+      "completion_tokens": 46,
+      "truncated": false,
+      "elapsed_s": 2.7782
+    },
+    {
+      "question_id": "86b68151",
+      "question_type": "single-session-user",
+      "context_tokens": 2526,
+      "prompt_tokens": 2916,
+      "completion_tokens": 21,
+      "truncated": false,
+      "elapsed_s": 1.6918
+    },
+    {
+      "question_id": "577d4d32",
+      "question_type": "single-session-user",
+      "context_tokens": 2723,
+      "prompt_tokens": 3185,
+      "completion_tokens": 44,
+      "truncated": false,
+      "elapsed_s": 2.4723
+    },
+    {
+      "question_id": "ec81a493",
+      "question_type": "single-session-user",
+      "context_tokens": 2968,
+      "prompt_tokens": 3373,
+      "completion_tokens": 35,
+      "truncated": false,
+      "elapsed_s": 2.5764
+    },
+    {
+      "question_id": "15745da0",
+      "question_type": "single-session-user",
+      "context_tokens": 3811,
+      "prompt_tokens": 4416,
+      "completion_tokens": 23,
+      "truncated": false,
+      "elapsed_s": 2.2187
+    },
+    {
+      "question_id": "e01b8e2f",
+      "question_type": "single-session-user",
+      "context_tokens": 3748,
+      "prompt_tokens": 4488,
+      "completion_tokens": 45,
+      "truncated": false,
+      "elapsed_s": 8.4125
+    },
+    {
+      "question_id": "bc8a6e93",
+      "question_type": "single-session-user",
+      "context_tokens": 3515,
+      "prompt_tokens": 4311,
+      "completion_tokens": 66,
+      "truncated": false,
+      "elapsed_s": 2.5652
+    },
+    {
+      "question_id": "ccb36322",
+      "question_type": "single-session-user",
+      "context_tokens": 2405,
+      "prompt_tokens": 2769,
+      "completion_tokens": 47,
+      "truncated": false,
+      "elapsed_s": 2.2244
+    },
+    {
+      "question_id": "001be529",
+      "question_type": "single-session-user",
+      "context_tokens": 3116,
+      "prompt_tokens": 3583,
+      "completion_tokens": 53,
+      "truncated": false,
+      "elapsed_s": 2.4719
+    },
+    {
+      "question_id": "b320f3f8",
+      "question_type": "single-session-user",
+      "context_tokens": 3841,
+      "prompt_tokens": 4453,
+      "completion_tokens": 34,
+      "truncated": false,
+      "elapsed_s": 2.2955
+    },
+    {
+      "question_id": "19b5f2b3",
+      "question_type": "single-session-user",
+      "context_tokens": 3501,
+      "prompt_tokens": 4133,
+      "completion_tokens": 27,
+      "truncated": false,
+      "elapsed_s": 1.9058
+    },
+    {
+      "question_id": "4fd1909e",
+      "question_type": "single-session-user",
+      "context_tokens": 1742,
+      "prompt_tokens": 2019,
+      "completion_tokens": 30,
+      "truncated": false,
+      "elapsed_s": 1.7898
+    },
+    {
+      "question_id": "545bd2b5",
+      "question_type": "single-session-user",
+      "context_tokens": 3622,
+      "prompt_tokens": 4074,
+      "completion_tokens": 35,
+      "truncated": false,
+      "elapsed_s": 1.9817
+    },
+    {
+      "question_id": "8a137a7f",
+      "question_type": "single-session-user",
+      "context_tokens": 3312,
+      "prompt_tokens": 3894,
+      "completion_tokens": 72,
+      "truncated": false,
+      "elapsed_s": 2.7645
+    },
+    {
+      "question_id": "76d63226",
+      "question_type": "single-session-user",
+      "context_tokens": 2916,
+      "prompt_tokens": 3402,
+      "completion_tokens": 43,
+      "truncated": false,
+      "elapsed_s": 2.8352
+    },
+    {
+      "question_id": "86f00804",
+      "question_type": "single-session-user",
+      "context_tokens": 3120,
+      "prompt_tokens": 3524,
+      "completion_tokens": 53,
+      "truncated": false,
+      "elapsed_s": 2.5467
+    },
+    {
+      "question_id": "8e9d538c",
+      "question_type": "single-session-user",
+      "context_tokens": 3439,
+      "prompt_tokens": 4002,
+      "completion_tokens": 28,
+      "truncated": false,
+      "elapsed_s": 2.0974
+    },
+    {
+      "question_id": "311778f1",
+      "question_type": "single-session-user",
+      "context_tokens": 3492,
+      "prompt_tokens": 3936,
+      "completion_tokens": 36,
+      "truncated": false,
+      "elapsed_s": 2.2554
+    },
+    {
+      "question_id": "c19f7a0b",
+      "question_type": "single-session-user",
+      "context_tokens": 2869,
+      "prompt_tokens": 3427,
+      "completion_tokens": 26,
+      "truncated": false,
+      "elapsed_s": 1.9215
+    },
+    {
+      "question_id": "4100d0a0",
+      "question_type": "single-session-user",
+      "context_tokens": 2735,
+      "prompt_tokens": 3053,
+      "completion_tokens": 24,
+      "truncated": false,
+      "elapsed_s": 2.1381
+    },
+    {
+      "question_id": "29f2956b",
+      "question_type": "single-session-user",
+      "context_tokens": 3936,
+      "prompt_tokens": 4423,
+      "completion_tokens": 34,
+      "truncated": false,
+      "elapsed_s": 2.3659
+    },
+    {
+      "question_id": "1faac195",
+      "question_type": "single-session-user",
+      "context_tokens": 3209,
+      "prompt_tokens": 3635,
+      "completion_tokens": 17,
+      "truncated": false,
+      "elapsed_s": 1.9562
+    },
+    {
+      "question_id": "faba32e5",
+      "question_type": "single-session-user",
+      "context_tokens": 3369,
+      "prompt_tokens": 3995,
+      "completion_tokens": 41,
+      "truncated": false,
+      "elapsed_s": 2.1588
+    },
+    {
+      "question_id": "f4f1d8a4",
+      "question_type": "single-session-user",
+      "context_tokens": 2309,
+      "prompt_tokens": 2874,
+      "completion_tokens": 24,
+      "truncated": false,
+      "elapsed_s": 2.0531
+    },
+    {
+      "question_id": "c14c00dd",
+      "question_type": "single-session-user",
+      "context_tokens": 3010,
+      "prompt_tokens": 3565,
+      "completion_tokens": 51,
+      "truncated": false,
+      "elapsed_s": 2.4138
+    },
+    {
+      "question_id": "36580ce8",
+      "question_type": "single-session-user",
+      "context_tokens": 3351,
+      "prompt_tokens": 3968,
+      "completion_tokens": 29,
+      "truncated": false,
+      "elapsed_s": 1.962
+    },
+    {
+      "question_id": "3d86fd0a",
+      "question_type": "single-session-user",
+      "context_tokens": 1701,
+      "prompt_tokens": 1991,
+      "completion_tokens": 21,
+      "truncated": false,
+      "elapsed_s": 1.8266
+    },
+    {
+      "question_id": "a82c026e",
+      "question_type": "single-session-user",
+      "context_tokens": 2452,
+      "prompt_tokens": 2840,
+      "completion_tokens": 33,
+      "truncated": false,
+      "elapsed_s": 1.8538
+    },
+    {
+      "question_id": "0862e8bf_abs",
+      "question_type": "single-session-user",
+      "context_tokens": 2798,
+      "prompt_tokens": 3345,
+      "completion_tokens": 39,
+      "truncated": false,
+      "elapsed_s": 2.2978
+    },
+    {
+      "question_id": "15745da0_abs",
+      "question_type": "single-session-user",
+      "context_tokens": 3812,
+      "prompt_tokens": 4417,
+      "completion_tokens": 70,
+      "truncated": false,
+      "elapsed_s": 2.9042
+    },
+    {
+      "question_id": "bc8a6e93_abs",
+      "question_type": "single-session-user",
+      "context_tokens": 3516,
+      "prompt_tokens": 4312,
+      "completion_tokens": 56,
+      "truncated": false,
+      "elapsed_s": 2.731
+    },
+    {
+      "question_id": "19b5f2b3_abs",
+      "question_type": "single-session-user",
+      "context_tokens": 3502,
+      "prompt_tokens": 4135,
+      "completion_tokens": 80,
+      "truncated": false,
+      "elapsed_s": 3.5215
+    },
+    {
+      "question_id": "29f2956b_abs",
+      "question_type": "single-session-user",
+      "context_tokens": 3937,
+      "prompt_tokens": 4423,
+      "completion_tokens": 47,
+      "truncated": false,
+      "elapsed_s": 2.8908
+    },
+    {
+      "question_id": "f4f1d8a4_abs",
+      "question_type": "single-session-user",
+      "context_tokens": 2310,
+      "prompt_tokens": 2876,
+      "completion_tokens": 82,
+      "truncated": false,
+      "elapsed_s": 2.887
+    },
+    {
+      "question_id": "gpt4_59149c77",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7841,
+      "prompt_tokens": 8767,
+      "completion_tokens": 89,
+      "truncated": false,
+      "elapsed_s": 3.0769
+    },
+    {
+      "question_id": "gpt4_f49edff3",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7234,
+      "prompt_tokens": 8450,
+      "completion_tokens": 108,
+      "truncated": false,
+      "elapsed_s": 3.1947
+    },
+    {
+      "question_id": "71017276",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 3758,
+      "prompt_tokens": 4311,
+      "completion_tokens": 71,
+      "truncated": false,
+      "elapsed_s": 5.8644
+    },
+    {
+      "question_id": "b46e15ed",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 14352,
+      "prompt_tokens": 16573,
+      "completion_tokens": 160,
+      "truncated": false,
+      "elapsed_s": 4.8659
+    },
+    {
+      "question_id": "gpt4_fa19884c",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6143,
+      "prompt_tokens": 6936,
+      "completion_tokens": 132,
+      "truncated": false,
+      "elapsed_s": 3.7077
+    },
+    {
+      "question_id": "0bc8ad92",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 8472,
+      "prompt_tokens": 9319,
+      "completion_tokens": 158,
+      "truncated": false,
+      "elapsed_s": 4.7255
+    },
+    {
+      "question_id": "af082822",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 2822,
+      "prompt_tokens": 3347,
+      "completion_tokens": 82,
+      "truncated": false,
+      "elapsed_s": 3.9216
+    },
+    {
+      "question_id": "gpt4_4929293a",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6088,
+      "prompt_tokens": 6810,
+      "completion_tokens": 62,
+      "truncated": false,
+      "elapsed_s": 2.6805
+    },
+    {
+      "question_id": "gpt4_b5700ca9",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 2783,
+      "prompt_tokens": 3183,
+      "completion_tokens": 65,
+      "truncated": false,
+      "elapsed_s": 2.3017
+    },
+    {
+      "question_id": "9a707b81",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6841,
+      "prompt_tokens": 8223,
+      "completion_tokens": 158,
+      "truncated": false,
+      "elapsed_s": 5.143
+    },
+    {
+      "question_id": "gpt4_1d4ab0c9",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6885,
+      "prompt_tokens": 8227,
+      "completion_tokens": 71,
+      "truncated": false,
+      "elapsed_s": 2.9811
+    },
+    {
+      "question_id": "gpt4_e072b769",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 2750,
+      "prompt_tokens": 3332,
+      "completion_tokens": 77,
+      "truncated": false,
+      "elapsed_s": 2.5741
+    },
+    {
+      "question_id": "0db4c65d",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7063,
+      "prompt_tokens": 7801,
+      "completion_tokens": 78,
+      "truncated": false,
+      "elapsed_s": 2.5591
+    },
+    {
+      "question_id": "gpt4_1d80365e",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6672,
+      "prompt_tokens": 7780,
+      "completion_tokens": 105,
+      "truncated": false,
+      "elapsed_s": 7.1141
+    },
+    {
+      "question_id": "gpt4_7f6b06db",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 8819,
+      "prompt_tokens": 10344,
+      "completion_tokens": 163,
+      "truncated": false,
+      "elapsed_s": 4.3376
+    },
+    {
+      "question_id": "gpt4_6dc9b45b",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 4412,
+      "prompt_tokens": 5149,
+      "completion_tokens": 57,
+      "truncated": false,
+      "elapsed_s": 2.379
+    },
+    {
+      "question_id": "gpt4_8279ba02",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 3346,
+      "prompt_tokens": 4043,
+      "completion_tokens": 73,
+      "truncated": false,
+      "elapsed_s": 6.3363
+    },
+    {
+      "question_id": "gpt4_18c2b244",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 8059,
+      "prompt_tokens": 9441,
+      "completion_tokens": 165,
+      "truncated": false,
+      "elapsed_s": 3.5561
+    },
+    {
+      "question_id": "gpt4_a1b77f9c",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 22124,
+      "prompt_tokens": 25002,
+      "completion_tokens": 352,
+      "truncated": false,
+      "elapsed_s": 7.2885
+    },
+    {
+      "question_id": "gpt4_1916e0ea",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5884,
+      "prompt_tokens": 7074,
+      "completion_tokens": 116,
+      "truncated": false,
+      "elapsed_s": 3.6593
+    },
+    {
+      "question_id": "gpt4_7a0daae1",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7061,
+      "prompt_tokens": 7996,
+      "completion_tokens": 105,
+      "truncated": false,
+      "elapsed_s": 2.9075
+    },
+    {
+      "question_id": "gpt4_468eb063",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 3665,
+      "prompt_tokens": 4068,
+      "completion_tokens": 50,
+      "truncated": false,
+      "elapsed_s": 2.2161
+    },
+    {
+      "question_id": "gpt4_7abb270c",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 16046,
+      "prompt_tokens": 17824,
+      "completion_tokens": 309,
+      "truncated": false,
+      "elapsed_s": 6.2715
+    },
+    {
+      "question_id": "gpt4_1e4a8aeb",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6135,
+      "prompt_tokens": 7163,
+      "completion_tokens": 68,
+      "truncated": false,
+      "elapsed_s": 2.4968
+    },
+    {
+      "question_id": "gpt4_4fc4f797",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6908,
+      "prompt_tokens": 7860,
+      "completion_tokens": 138,
+      "truncated": false,
+      "elapsed_s": 4.1979
+    },
+    {
+      "question_id": "4dfccbf7",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6167,
+      "prompt_tokens": 6918,
+      "completion_tokens": 110,
+      "truncated": false,
+      "elapsed_s": 3.8048
+    },
+    {
+      "question_id": "gpt4_61e13b3c",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7065,
+      "prompt_tokens": 7985,
+      "completion_tokens": 156,
+      "truncated": false,
+      "elapsed_s": 5.3263
+    },
+    {
+      "question_id": "gpt4_45189cb4",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7328,
+      "prompt_tokens": 8259,
+      "completion_tokens": 117,
+      "truncated": false,
+      "elapsed_s": 3.6045
+    },
+    {
+      "question_id": "2ebe6c90",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5917,
+      "prompt_tokens": 6819,
+      "completion_tokens": 161,
+      "truncated": false,
+      "elapsed_s": 4.7813
+    },
+    {
+      "question_id": "gpt4_e061b84f",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 9548,
+      "prompt_tokens": 11037,
+      "completion_tokens": 120,
+      "truncated": false,
+      "elapsed_s": 4.0608
+    },
+    {
+      "question_id": "370a8ff4",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6367,
+      "prompt_tokens": 7374,
+      "completion_tokens": 151,
+      "truncated": false,
+      "elapsed_s": 4.1572
+    },
+    {
+      "question_id": "gpt4_d6585ce8",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 16189,
+      "prompt_tokens": 18113,
+      "completion_tokens": 304,
+      "truncated": false,
+      "elapsed_s": 6.5616
+    },
+    {
+      "question_id": "gpt4_4ef30696",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6733,
+      "prompt_tokens": 7726,
+      "completion_tokens": 96,
+      "truncated": false,
+      "elapsed_s": 2.8771
+    },
+    {
+      "question_id": "gpt4_ec93e27f",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 4964,
+      "prompt_tokens": 5628,
+      "completion_tokens": 106,
+      "truncated": false,
+      "elapsed_s": 3.8099
+    },
+    {
+      "question_id": "6e984301",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 8235,
+      "prompt_tokens": 9403,
+      "completion_tokens": 191,
+      "truncated": false,
+      "elapsed_s": 7.811
+    },
+    {
+      "question_id": "8077ef71",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 1502,
+      "prompt_tokens": 1785,
+      "completion_tokens": 67,
+      "truncated": false,
+      "elapsed_s": 4.524
+    },
+    {
+      "question_id": "gpt4_f420262c",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 14022,
+      "prompt_tokens": 15941,
+      "completion_tokens": 205,
+      "truncated": false,
+      "elapsed_s": 6.6161
+    },
+    {
+      "question_id": "gpt4_8e165409",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6242,
+      "prompt_tokens": 7098,
+      "completion_tokens": 73,
+      "truncated": false,
+      "elapsed_s": 2.7344
+    },
+    {
+      "question_id": "gpt4_74aed68e",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6549,
+      "prompt_tokens": 7626,
+      "completion_tokens": 114,
+      "truncated": false,
+      "elapsed_s": 3.4216
+    },
+    {
+      "question_id": "bcbe585f",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 2246,
+      "prompt_tokens": 2677,
+      "completion_tokens": 79,
+      "truncated": false,
+      "elapsed_s": 3.0804
+    },
+    {
+      "question_id": "gpt4_21adecb5",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 8790,
+      "prompt_tokens": 10253,
+      "completion_tokens": 140,
+      "truncated": false,
+      "elapsed_s": 4.4307
+    },
+    {
+      "question_id": "5e1b23de",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 3585,
+      "prompt_tokens": 4040,
+      "completion_tokens": 60,
+      "truncated": false,
+      "elapsed_s": 2.5669
+    },
+    {
+      "question_id": "gpt4_98f46fc6",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6007,
+      "prompt_tokens": 6919,
+      "completion_tokens": 116,
+      "truncated": false,
+      "elapsed_s": 3.8639
+    },
+    {
+      "question_id": "gpt4_af6db32f",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 2766,
+      "prompt_tokens": 3173,
+      "completion_tokens": 50,
+      "truncated": false,
+      "elapsed_s": 2.1663
+    },
+    {
+      "question_id": "eac54adc",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7289,
+      "prompt_tokens": 8295,
+      "completion_tokens": 94,
+      "truncated": false,
+      "elapsed_s": 3.6437
+    },
+    {
+      "question_id": "gpt4_7ddcf75f",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 3391,
+      "prompt_tokens": 3954,
+      "completion_tokens": 78,
+      "truncated": false,
+      "elapsed_s": 2.4967
+    },
+    {
+      "question_id": "gpt4_a2d1d1f6",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 3181,
+      "prompt_tokens": 3915,
+      "completion_tokens": 62,
+      "truncated": false,
+      "elapsed_s": 2.7381
+    },
+    {
+      "question_id": "gpt4_85da3956",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 2161,
+      "prompt_tokens": 2560,
+      "completion_tokens": 70,
+      "truncated": false,
+      "elapsed_s": 2.3483
+    },
+    {
+      "question_id": "gpt4_b0863698",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 2825,
+      "prompt_tokens": 3213,
+      "completion_tokens": 66,
+      "truncated": false,
+      "elapsed_s": 4.5963
+    },
+    {
+      "question_id": "gpt4_68e94287",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5611,
+      "prompt_tokens": 6883,
+      "completion_tokens": 137,
+      "truncated": false,
+      "elapsed_s": 4.4308
+    },
+    {
+      "question_id": "gpt4_e414231e",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6278,
+      "prompt_tokens": 7335,
+      "completion_tokens": 78,
+      "truncated": false,
+      "elapsed_s": 2.8583
+    },
+    {
+      "question_id": "gpt4_7ca326fa",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7778,
+      "prompt_tokens": 8763,
+      "completion_tokens": 169,
+      "truncated": false,
+      "elapsed_s": 5.3765
+    },
+    {
+      "question_id": "gpt4_7bc6cf22",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 4208,
+      "prompt_tokens": 4725,
+      "completion_tokens": 101,
+      "truncated": false,
+      "elapsed_s": 2.9978
+    },
+    {
+      "question_id": "2ebe6c92",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 5917,
+      "prompt_tokens": 6806,
+      "completion_tokens": 118,
+      "truncated": false,
+      "elapsed_s": 4.2321
+    },
+    {
+      "question_id": "gpt4_e061b84g",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 9549,
+      "prompt_tokens": 11032,
+      "completion_tokens": 49,
+      "truncated": false,
+      "elapsed_s": 3.1377
+    },
+    {
+      "question_id": "71017277",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 3758,
+      "prompt_tokens": 4303,
+      "completion_tokens": 93,
+      "truncated": false,
+      "elapsed_s": 3.3912
+    },
+    {
+      "question_id": "b46e15ee",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 14359,
+      "prompt_tokens": 16573,
+      "completion_tokens": 126,
+      "truncated": false,
+      "elapsed_s": 3.803
+    },
+    {
+      "question_id": "gpt4_d6585ce9",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 16422,
+      "prompt_tokens": 18350,
+      "completion_tokens": 43,
+      "truncated": false,
+      "elapsed_s": 2.3407
+    },
+    {
+      "question_id": "gpt4_1e4a8aec",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6629,
+      "prompt_tokens": 7709,
+      "completion_tokens": 72,
+      "truncated": false,
+      "elapsed_s": 3.4709
+    },
+    {
+      "question_id": "gpt4_f420262d",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 14752,
+      "prompt_tokens": 16725,
+      "completion_tokens": 144,
+      "truncated": false,
+      "elapsed_s": 4.6536
+    },
+    {
+      "question_id": "gpt4_59149c78",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7841,
+      "prompt_tokens": 8754,
+      "completion_tokens": 166,
+      "truncated": false,
+      "elapsed_s": 5.009
+    },
+    {
+      "question_id": "gpt4_e414231f",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6316,
+      "prompt_tokens": 7362,
+      "completion_tokens": 169,
+      "truncated": false,
+      "elapsed_s": 5.1557
+    },
+    {
+      "question_id": "gpt4_4929293b",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6036,
+      "prompt_tokens": 6755,
+      "completion_tokens": 94,
+      "truncated": false,
+      "elapsed_s": 3.4452
+    },
+    {
+      "question_id": "gpt4_468eb064",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 3665,
+      "prompt_tokens": 4071,
+      "completion_tokens": 39,
+      "truncated": false,
+      "elapsed_s": 1.7905
+    },
+    {
+      "question_id": "gpt4_fa19884d",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6838,
+      "prompt_tokens": 7706,
+      "completion_tokens": 87,
+      "truncated": false,
+      "elapsed_s": 3.4974
+    },
+    {
+      "question_id": "9a707b82",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6842,
+      "prompt_tokens": 8215,
+      "completion_tokens": 53,
+      "truncated": false,
+      "elapsed_s": 2.5102
+    },
+    {
+      "question_id": "eac54add",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 7298,
+      "prompt_tokens": 8298,
+      "completion_tokens": 72,
+      "truncated": false,
+      "elapsed_s": 3.6487
+    },
+    {
+      "question_id": "4dfccbf8",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6167,
+      "prompt_tokens": 6902,
+      "completion_tokens": 61,
+      "truncated": false,
+      "elapsed_s": 3.6689
+    },
+    {
+      "question_id": "0bc8ad93",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 8826,
+      "prompt_tokens": 9704,
+      "completion_tokens": 69,
+      "truncated": false,
+      "elapsed_s": 7.404
+    },
+    {
+      "question_id": "6e984302",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 8235,
+      "prompt_tokens": 9397,
+      "completion_tokens": 84,
+      "truncated": false,
+      "elapsed_s": 3.5806
+    },
+    {
+      "question_id": "gpt4_8279ba03",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 3435,
+      "prompt_tokens": 4148,
+      "completion_tokens": 78,
+      "truncated": false,
+      "elapsed_s": 3.159
+    },
+    {
+      "question_id": "gpt4_b5700ca0",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 2782,
+      "prompt_tokens": 3173,
+      "completion_tokens": 38,
+      "truncated": false,
+      "elapsed_s": 2.4158
+    },
+    {
+      "question_id": "gpt4_68e94288",
+      "question_type": "temporal-reasoning",
+      "context_tokens": 6120,
+      "prompt_tokens": 7520,
+      "completion_tokens": 71,
+      "truncated": false,
+      "elapsed_s": 2.8184
+    },
+    {
+      "question_id": "d3ab962e",
+      "question_type": "multi-session",
+      "context_tokens": 5831,
+      "prompt_tokens": 6609,
+      "completion_tokens": 87,
+      "truncated": false,
+      "elapsed_s": 3.0262
+    },
+    {
+      "question_id": "2311e44b",
+      "question_type": "multi-session",
+      "context_tokens": 4845,
+      "prompt_tokens": 5519,
+      "completion_tokens": 91,
+      "truncated": false,
+      "elapsed_s": 3.3094
+    },
+    {
+      "question_id": "cc06de0d",
+      "question_type": "multi-session",
+      "context_tokens": 4629,
+      "prompt_tokens": 5252,
+      "completion_tokens": 81,
+      "truncated": false,
+      "elapsed_s": 3.0672
+    },
+    {
+      "question_id": "a11281a2",
+      "question_type": "multi-session",
+      "context_tokens": 7984,
+      "prompt_tokens": 9043,
+      "completion_tokens": 68,
+      "truncated": false,
+      "elapsed_s": 3.0533
+    },
+    {
+      "question_id": "4f54b7c9",
+      "question_type": "multi-session",
+      "context_tokens": 6308,
+      "prompt_tokens": 7325,
+      "completion_tokens": 65,
+      "truncated": false,
+      "elapsed_s": 2.7508
+    },
+    {
+      "question_id": "85fa3a3f",
+      "question_type": "multi-session",
+      "context_tokens": 3804,
+      "prompt_tokens": 4424,
+      "completion_tokens": 186,
+      "truncated": false,
+      "elapsed_s": 5.0415
+    },
+    {
+      "question_id": "9aaed6a3",
+      "question_type": "multi-session",
+      "context_tokens": 2337,
+      "prompt_tokens": 2762,
+      "completion_tokens": 83,
+      "truncated": false,
+      "elapsed_s": 3.4182
+    },
+    {
+      "question_id": "1f2b8d4f",
+      "question_type": "multi-session",
+      "context_tokens": 6513,
+      "prompt_tokens": 7458,
+      "completion_tokens": 91,
+      "truncated": false,
+      "elapsed_s": 3.5063
+    },
+    {
+      "question_id": "e6041065",
+      "question_type": "multi-session",
+      "context_tokens": 5473,
+      "prompt_tokens": 6613,
+      "completion_tokens": 70,
+      "truncated": false,
+      "elapsed_s": 2.8877
+    },
+    {
+      "question_id": "51c32626",
+      "question_type": "multi-session",
+      "context_tokens": 5635,
+      "prompt_tokens": 6299,
+      "completion_tokens": 81,
+      "truncated": false,
+      "elapsed_s": 4.6937
+    },
+    {
+      "question_id": "d905b33f",
+      "question_type": "multi-session",
+      "context_tokens": 4431,
+      "prompt_tokens": 5030,
+      "completion_tokens": 109,
+      "truncated": false,
+      "elapsed_s": 3.1948
+    },
+    {
+      "question_id": "7405e8b1",
+      "question_type": "multi-session",
+      "context_tokens": 5336,
+      "prompt_tokens": 6092,
+      "completion_tokens": 78,
+      "truncated": false,
+      "elapsed_s": 2.9335
+    },
+    {
+      "question_id": "f35224e0",
+      "question_type": "multi-session",
+      "context_tokens": 5306,
+      "prompt_tokens": 6097,
+      "completion_tokens": 80,
+      "truncated": false,
+      "elapsed_s": 3.1472
+    },
+    {
+      "question_id": "6456829e",
+      "question_type": "multi-session",
+      "context_tokens": 6381,
+      "prompt_tokens": 7698,
+      "completion_tokens": 30,
+      "truncated": false,
+      "elapsed_s": 1.9636
+    },
+    {
+      "question_id": "a4996e51",
+      "question_type": "multi-session",
+      "context_tokens": 6306,
+      "prompt_tokens": 7041,
+      "completion_tokens": 51,
+      "truncated": false,
+      "elapsed_s": 2.7901
+    },
+    {
+      "question_id": "3c1045c8",
+      "question_type": "multi-session",
+      "context_tokens": 7781,
+      "prompt_tokens": 9088,
+      "completion_tokens": 154,
+      "truncated": false,
+      "elapsed_s": 6.5568
+    },
+    {
+      "question_id": "60036106",
+      "question_type": "multi-session",
+      "context_tokens": 7017,
+      "prompt_tokens": 7780,
+      "completion_tokens": 103,
+      "truncated": false,
+      "elapsed_s": 3.7291
+    },
+    {
+      "question_id": "681a1674",
+      "question_type": "multi-session",
+      "context_tokens": 6572,
+      "prompt_tokens": 7635,
+      "completion_tokens": 64,
+      "truncated": false,
+      "elapsed_s": 3.0856
+    },
+    {
+      "question_id": "e25c3b8d",
+      "question_type": "multi-session",
+      "context_tokens": 5101,
+      "prompt_tokens": 6035,
+      "completion_tokens": 150,
+      "truncated": false,
+      "elapsed_s": 4.9749
+    },
+    {
+      "question_id": "4adc0475",
+      "question_type": "multi-session",
+      "context_tokens": 7870,
+      "prompt_tokens": 8979,
+      "completion_tokens": 75,
+      "truncated": false,
+      "elapsed_s": 3.3459
+    },
+    {
+      "question_id": "4bc144e2",
+      "question_type": "multi-session",
+      "context_tokens": 3768,
+      "prompt_tokens": 4340,
+      "completion_tokens": 83,
+      "truncated": false,
+      "elapsed_s": 3.4556
+    },
+    {
+      "question_id": "ef66a6e5",
+      "question_type": "multi-session",
+      "context_tokens": 6204,
+      "prompt_tokens": 6904,
+      "completion_tokens": 66,
+      "truncated": false,
+      "elapsed_s": 4.805
+    },
+    {
+      "question_id": "5025383b",
+      "question_type": "multi-session",
+      "context_tokens": 6229,
+      "prompt_tokens": 7024,
+      "completion_tokens": 117,
+      "truncated": false,
+      "elapsed_s": 3.8612
+    },
+    {
+      "question_id": "a1cc6108",
+      "question_type": "multi-session",
+      "context_tokens": 5813,
+      "prompt_tokens": 6498,
+      "completion_tokens": 85,
+      "truncated": false,
+      "elapsed_s": 3.7297
+    },
+    {
+      "question_id": "9ee3ecd6",
+      "question_type": "multi-session",
+      "context_tokens": 5070,
+      "prompt_tokens": 6159,
+      "completion_tokens": 53,
+      "truncated": false,
+      "elapsed_s": 2.5023
+    },
+    {
+      "question_id": "3fdac837",
+      "question_type": "multi-session",
+      "context_tokens": 3632,
+      "prompt_tokens": 4299,
+      "completion_tokens": 116,
+      "truncated": false,
+      "elapsed_s": 3.9839
+    },
+    {
+      "question_id": "91b15a6e",
+      "question_type": "multi-session",
+      "context_tokens": 6424,
+      "prompt_tokens": 7340,
+      "completion_tokens": 168,
+      "truncated": false,
+      "elapsed_s": 5.2262
+    },
+    {
+      "question_id": "27016adc",
+      "question_type": "multi-session",
+      "context_tokens": 8325,
+      "prompt_tokens": 9359,
+      "completion_tokens": 106,
+      "truncated": false,
+      "elapsed_s": 3.8792
+    },
+    {
+      "question_id": "720133ac",
+      "question_type": "multi-session",
+      "context_tokens": 4395,
+      "prompt_tokens": 5254,
+      "completion_tokens": 84,
+      "truncated": false,
+      "elapsed_s": 6.6612
+    },
+    {
+      "question_id": "77eafa52",
+      "question_type": "multi-session",
+      "context_tokens": 3980,
+      "prompt_tokens": 4555,
+      "completion_tokens": 140,
+      "truncated": false,
+      "elapsed_s": 4.1678
+    },
+    {
+      "question_id": "8979f9ec",
+      "question_type": "multi-session",
+      "context_tokens": 6121,
+      "prompt_tokens": 7743,
+      "completion_tokens": 110,
+      "truncated": false,
+      "elapsed_s": 3.5831
+    },
+    {
+      "question_id": "0100672e",
+      "question_type": "multi-session",
+      "context_tokens": 5980,
+      "prompt_tokens": 6845,
+      "completion_tokens": 70,
+      "truncated": false,
+      "elapsed_s": 2.8786
+    },
+    {
+      "question_id": "a96c20ee",
+      "question_type": "multi-session",
+      "context_tokens": 6070,
+      "prompt_tokens": 6817,
+      "completion_tokens": 50,
+      "truncated": false,
+      "elapsed_s": 2.3742
+    },
+    {
+      "question_id": "92a0aa75",
+      "question_type": "multi-session",
+      "context_tokens": 6965,
+      "prompt_tokens": 7790,
+      "completion_tokens": 129,
+      "truncated": false,
+      "elapsed_s": 4.3468
+    },
+    {
+      "question_id": "3fe836c9",
+      "question_type": "multi-session",
+      "context_tokens": 6896,
+      "prompt_tokens": 7793,
+      "completion_tokens": 109,
+      "truncated": false,
+      "elapsed_s": 3.6014
+    },
+    {
+      "question_id": "1c549ce4",
+      "question_type": "multi-session",
+      "context_tokens": 5996,
+      "prompt_tokens": 6838,
+      "completion_tokens": 67,
+      "truncated": false,
+      "elapsed_s": 2.6097
+    },
+    {
+      "question_id": "6c49646a",
+      "question_type": "multi-session",
+      "context_tokens": 5783,
+      "prompt_tokens": 6821,
+      "completion_tokens": 107,
+      "truncated": false,
+      "elapsed_s": 3.4774
+    },
+    {
+      "question_id": "1192316e",
+      "question_type": "multi-session",
+      "context_tokens": 6786,
+      "prompt_tokens": 7720,
+      "completion_tokens": 120,
+      "truncated": false,
+      "elapsed_s": 3.667
+    },
+    {
+      "question_id": "0ea62687",
+      "question_type": "multi-session",
+      "context_tokens": 5944,
+      "prompt_tokens": 6675,
+      "completion_tokens": 71,
+      "truncated": false,
+      "elapsed_s": 3.1167
+    },
+    {
+      "question_id": "67e0d0f2",
+      "question_type": "multi-session",
+      "context_tokens": 6912,
+      "prompt_tokens": 7725,
+      "completion_tokens": 87,
+      "truncated": false,
+      "elapsed_s": 3.2725
+    },
+    {
+      "question_id": "bb7c3b45",
+      "question_type": "multi-session",
+      "context_tokens": 5783,
+      "prompt_tokens": 6781,
+      "completion_tokens": 69,
+      "truncated": false,
+      "elapsed_s": 3.9775
+    },
+    {
+      "question_id": "ba358f49",
+      "question_type": "multi-session",
+      "context_tokens": 6242,
+      "prompt_tokens": 7073,
+      "completion_tokens": 62,
+      "truncated": false,
+      "elapsed_s": 3.1941
+    },
+    {
+      "question_id": "61f8c8f8",
+      "question_type": "multi-session",
+      "context_tokens": 5778,
+      "prompt_tokens": 6670,
+      "completion_tokens": 84,
+      "truncated": false,
+      "elapsed_s": 3.2529
+    },
+    {
+      "question_id": "60159905",
+      "question_type": "multi-session",
+      "context_tokens": 6322,
+      "prompt_tokens": 7616,
+      "completion_tokens": 138,
+      "truncated": false,
+      "elapsed_s": 4.9528
+    },
+    {
+      "question_id": "ef9cf60a",
+      "question_type": "multi-session",
+      "context_tokens": 5685,
+      "prompt_tokens": 6539,
+      "completion_tokens": 40,
+      "truncated": false,
+      "elapsed_s": 2.0861
+    },
+    {
+      "question_id": "73d42213",
+      "question_type": "multi-session",
+      "context_tokens": 4779,
+      "prompt_tokens": 5344,
+      "completion_tokens": 72,
+      "truncated": false,
+      "elapsed_s": 2.8117
+    },
+    {
+      "question_id": "bc149d6b",
+      "question_type": "multi-session",
+      "context_tokens": 5466,
+      "prompt_tokens": 6342,
+      "completion_tokens": 146,
+      "truncated": false,
+      "elapsed_s": 4.3604
+    },
+    {
+      "question_id": "099778bb",
+      "question_type": "multi-session",
+      "context_tokens": 5882,
+      "prompt_tokens": 6505,
+      "completion_tokens": 92,
+      "truncated": false,
+      "elapsed_s": 3.5551
+    },
+    {
+      "question_id": "09ba9854",
+      "question_type": "multi-session",
+      "context_tokens": 4889,
+      "prompt_tokens": 5641,
+      "completion_tokens": 158,
+      "truncated": false,
+      "elapsed_s": 5.1713
+    },
+    {
+      "question_id": "d6062bb9",
+      "question_type": "multi-session",
+      "context_tokens": 6417,
+      "prompt_tokens": 7182,
+      "completion_tokens": 84,
+      "truncated": false,
+      "elapsed_s": 3.1056
+    },
+    {
+      "question_id": "157a136e",
+      "question_type": "multi-session",
+      "context_tokens": 6960,
+      "prompt_tokens": 8058,
+      "completion_tokens": 81,
+      "truncated": false,
+      "elapsed_s": 4.6022
+    },
+    {
+      "question_id": "c18a7dc8",
+      "question_type": "multi-session",
+      "context_tokens": 7117,
+      "prompt_tokens": 8021,
+      "completion_tokens": 90,
+      "truncated": false,
+      "elapsed_s": 3.7471
+    },
+    {
+      "question_id": "a3332713",
+      "question_type": "multi-session",
+      "context_tokens": 3437,
+      "prompt_tokens": 4007,
+      "completion_tokens": 80,
+      "truncated": false,
+      "elapsed_s": 2.8242
+    },
+    {
+      "question_id": "55241a1f",
+      "question_type": "multi-session",
+      "context_tokens": 6666,
+      "prompt_tokens": 7364,
+      "completion_tokens": 61,
+      "truncated": false,
+      "elapsed_s": 2.6587
+    },
+    {
+      "question_id": "a08a253f",
+      "question_type": "multi-session",
+      "context_tokens": 5545,
+      "prompt_tokens": 6459,
+      "completion_tokens": 90,
+      "truncated": false,
+      "elapsed_s": 2.879
+    },
+    {
+      "question_id": "f0e564bc",
+      "question_type": "multi-session",
+      "context_tokens": 7158,
+      "prompt_tokens": 8335,
+      "completion_tokens": 58,
+      "truncated": false,
+      "elapsed_s": 2.7649
+    },
+    {
+      "question_id": "078150f1",
+      "question_type": "multi-session",
+      "context_tokens": 6771,
+      "prompt_tokens": 7575,
+      "completion_tokens": 53,
+      "truncated": false,
+      "elapsed_s": 2.3187
+    },
+    {
+      "question_id": "8cf4d046",
+      "question_type": "multi-session",
+      "context_tokens": 8696,
+      "prompt_tokens": 9697,
+      "completion_tokens": 142,
+      "truncated": false,
+      "elapsed_s": 3.5682
+    },
+    {
+      "question_id": "a346bb18",
+      "question_type": "multi-session",
+      "context_tokens": 6484,
+      "prompt_tokens": 7385,
+      "completion_tokens": 148,
+      "truncated": false,
+      "elapsed_s": 5.4088
+    },
+    {
+      "question_id": "37f165cf",
+      "question_type": "multi-session",
+      "context_tokens": 5970,
+      "prompt_tokens": 6850,
+      "completion_tokens": 135,
+      "truncated": false,
+      "elapsed_s": 5.1234
+    },
+    {
+      "question_id": "8e91e7d9",
+      "question_type": "multi-session",
+      "context_tokens": 6641,
+      "prompt_tokens": 7188,
+      "completion_tokens": 39,
+      "truncated": false,
+      "elapsed_s": 2.8557
+    },
+    {
+      "question_id": "87f22b4a",
+      "question_type": "multi-session",
+      "context_tokens": 6579,
+      "prompt_tokens": 7689,
+      "completion_tokens": 172,
+      "truncated": false,
+      "elapsed_s": 5.834
+    },
+    {
+      "question_id": "e56a43b9",
+      "question_type": "multi-session",
+      "context_tokens": 5004,
+      "prompt_tokens": 5968,
+      "completion_tokens": 72,
+      "truncated": false,
+      "elapsed_s": 2.8113
+    },
+    {
+      "question_id": "efc3f7c2",
+      "question_type": "multi-session",
+      "context_tokens": 3105,
+      "prompt_tokens": 3608,
+      "completion_tokens": 62,
+      "truncated": false,
+      "elapsed_s": 2.2517
+    },
+    {
+      "question_id": "21d02d0d",
+      "question_type": "multi-session",
+      "context_tokens": 5607,
+      "prompt_tokens": 6290,
+      "completion_tokens": 100,
+      "truncated": false,
+      "elapsed_s": 3.9476
+    },
+    {
+      "question_id": "2311e44b_abs",
+      "question_type": "multi-session",
+      "context_tokens": 4847,
+      "prompt_tokens": 5523,
+      "completion_tokens": 133,
+      "truncated": false,
+      "elapsed_s": 4.0937
+    },
+    {
+      "question_id": "6456829e_abs",
+      "question_type": "multi-session",
+      "context_tokens": 6383,
+      "prompt_tokens": 7704,
+      "completion_tokens": 63,
+      "truncated": false,
+      "elapsed_s": 2.6359
+    },
+    {
+      "question_id": "e5ba910e_abs",
+      "question_type": "multi-session",
+      "context_tokens": 5561,
+      "prompt_tokens": 6334,
+      "completion_tokens": 87,
+      "truncated": false,
+      "elapsed_s": 4.0759
+    },
+    {
+      "question_id": "a96c20ee_abs",
+      "question_type": "multi-session",
+      "context_tokens": 6072,
+      "prompt_tokens": 6823,
+      "completion_tokens": 110,
+      "truncated": false,
+      "elapsed_s": 4.2793
+    },
+    {
+      "question_id": "ba358f49_abs",
+      "question_type": "multi-session",
+      "context_tokens": 6244,
+      "prompt_tokens": 7075,
+      "completion_tokens": 110,
+      "truncated": false,
+      "elapsed_s": 3.6044
+    },
+    {
+      "question_id": "09ba9854_abs",
+      "question_type": "multi-session",
+      "context_tokens": 4891,
+      "prompt_tokens": 5643,
+      "completion_tokens": 306,
+      "truncated": false,
+      "elapsed_s": 7.8078
+    }
+  ],
+  "notes": []
+}

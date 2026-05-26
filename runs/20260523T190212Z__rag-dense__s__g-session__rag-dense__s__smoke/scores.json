@@ -1,0 +1,32 @@
+{
+  "per_type": {
+    "single-session-user": {
+      "accuracy": 0.8571,
+      "n": 7
+    },
+    "single-session-preference": {
+      "accuracy": 1.0,
+      "n": 3
+    },
+    "single-session-assistant": {
+      "accuracy": 1.0,
+      "n": 5
+    },
+    "multi-session": {
+      "accuracy": 0.4615,
+      "n": 13
+    },
+    "temporal-reasoning": {
+      "accuracy": 0.2857,
+      "n": 14
+    },
+    "knowledge-update": {
+      "accuracy": 0.875,
+      "n": 8
+    }
+  },
+  "task_averaged_accuracy": 0.7466,
+  "overall_accuracy": 0.62,
+  "abstention_accuracy": 1.0,
+  "abstention_n": 4
+}

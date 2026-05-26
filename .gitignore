@@ -24,3 +24,6 @@ __pycache__/
 **/.tiktoken_cache/
 # stray nested clone, should never be committed
 /activegraph-longmemeval/
+
+# another stray nested repo
+/regimes/

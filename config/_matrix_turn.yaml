@@ -1,0 +1,35 @@
+reader:
+  backend: anthropic
+  model: claude-sonnet-4-5
+  temperature: 0.0
+  max_tokens: 1024
+judge:
+  short_name: gpt-4o
+  resolved_model: gpt-4o-2024-08-06
+  temperature: 0.0
+embeddings:
+  backend: openai
+  model: text-embedding-3-small
+retrieval:
+  granularity: turn
+  top_k: 10
+full_context_s:
+  token_budget: 180000
+  truncation: oldest_first
+activegraph:
+  token_budget: 2500
+  min_token_length: 4
+  min_session_cooccurrence: 2
+  max_doc_freq_fraction: 0.5
+systems:
+- full-context-oracle
+- full-context-s
+- rag-bm25
+- rag-dense
+- activegraph-det-lexical
+- activegraph-det-embedding
+datasets:
+  oracle: data/longmemeval_oracle.json
+  s: data/longmemeval_s_cleaned.json
+seed: 42
+output_dir: runs
