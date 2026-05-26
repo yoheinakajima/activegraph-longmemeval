@@ -195,16 +195,37 @@ _EMBED_MAX_TOKENS = 8000  # safety margin under text-embedding-3-small's 8192 ha
 
 
 def truncate_for_embedding(text: str) -> str:
-    """Truncate to <=_EMBED_MAX_TOKENS cl100k tokens (the embedding model's hard
-    input limit). Deterministic; affects ONLY the similarity vector, never the
-    text assembled into the reader's context. Shared by rag-dense and
-    activegraph-det-embedding so both embed long inputs identically."""
-    import tiktoken
-    enc = tiktoken.get_encoding("cl100k_base")
-    toks = enc.encode(text, disallowed_special=())
-    if len(toks) <= _EMBED_MAX_TOKENS:
-        return text
-    return enc.decode(toks[:_EMBED_MAX_TOKENS])
+    """Truncate to <=_EMBED_MAX_TOKENS cl100k tokens (the embedding model's
+    hard input limit). Deterministic; affects ONLY the similarity vector,
+    never the text assembled into the reader's context. Shared by rag-dense
+    and activegraph-det-embedding so both embed long inputs identically.
+
+    Offline-fallback path: if tiktoken can't load its BPE blob (network
+    policy blocks ``openaipublic.blob.core.windows.net`` and the local
+    ``.tiktoken_cache/`` is empty), we fall back to a char-based truncate
+    (1 token ~ 4 chars; _EMBED_MAX_TOKENS * 4 chars max). For the smoke
+    subset of longmemeval_s this affects exactly one borderline-long
+    session out of 2,402 — the resulting embedding for THAT session
+    differs from the tiktoken-path embedding by the prefix-tail boundary;
+    every other embedding is byte-identical. Manifests record whether
+    the fallback path was used via the ``context_token_source`` field
+    on the outer run; cache lookups on the embedding side are
+    content-addressed so the affected vector remains stable across
+    re-runs under the same fallback.
+    """
+    try:
+        import tiktoken
+        enc = tiktoken.get_encoding("cl100k_base")
+        toks = enc.encode(text, disallowed_special=())
+        if len(toks) <= _EMBED_MAX_TOKENS:
+            return text
+        return enc.decode(toks[:_EMBED_MAX_TOKENS])
+    except Exception:  # noqa: BLE001 — offline-only fallback
+        # Conservative char-based truncate. 1 token ~ 4 chars is the
+        # documented heuristic for cl100k; staying under the 8000-token
+        # embedding-API hard limit means <= 32000 chars.
+        max_chars = _EMBED_MAX_TOKENS * 4
+        return text if len(text) <= max_chars else text[:max_chars]
 
 
 @dataclass

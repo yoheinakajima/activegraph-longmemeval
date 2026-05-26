@@ -17,6 +17,7 @@ wasn't caught by the guard.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import time
 from pathlib import Path
@@ -69,13 +70,17 @@ def fact_signature(state) -> list[dict]:
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--seed", choices=["A", "B", "C"], default="A")
+    args = ap.parse_args()
+
     cfg = load_config("config/run.yaml")
     all_instances = load_dataset(cfg.datasets["s"])
     ids = set(smoke_ids(Path("config/smoke_ids.txt")))
     instances = [i for i in all_instances if i.question_id in ids]
-    print(f"Smoke questions: {len(instances)}")
+    print(f"Smoke questions: {len(instances)} (seed={args.seed})")
 
-    system = build_system("activegraph-sem-extract", cfg, extract_seed="A")
+    system = build_system("activegraph-sem-extract", cfg, extract_seed=args.seed)
     print(f"Cache path: {system._cache.cache_path}")
     print(f"Entries loaded at init: {len(system._cache)}")
     print(f"Manifest prompt_sha256: {system._prompt_sha256}")
