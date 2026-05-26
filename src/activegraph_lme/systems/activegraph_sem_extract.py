@@ -342,17 +342,53 @@ class _PersistentExtractionCache:
     def _load_or_init(self) -> None:
         """Read the manifest + JSONL into memory. Refuse to serve a
         cache whose manifest was stamped under a different prompt or
-        model alias — see :class:`CacheManifestMismatchError`."""
+        model alias — see :class:`CacheManifestMismatchError`.
+
+        Tolerated states:
+          - Neither exists       → fresh cache (manifest stamped on flush).
+          - Both exist           → validate manifest, load entries.
+          - Cache only           → PARTIAL BUILD. A parallel build under
+                                   ACTIVEGRAPH_SEM_EXTRACT_CACHE_NO_FLUSH=1
+                                   produces a JSONL of harvested entries
+                                   but defers the manifest stamp to the
+                                   parent process. Treat this as a
+                                   resumable build: load the entries as
+                                   trusted (they came from this process
+                                   tree under the same prompt + alias)
+                                   and let the next flush write the
+                                   manifest.
+          - Manifest only        → real error; refuse.
+        """
         manifest_exists = self.manifest_path.exists()
         cache_exists = self.cache_path.exists()
-        if manifest_exists != cache_exists:
+        if manifest_exists and not cache_exists:
             raise CacheManifestMismatchError(
-                f"inconsistent cache state: manifest={manifest_exists!r} "
-                f"cache_file={cache_exists!r} at {self.cache_dir}. "
-                f"Delete both and rebuild, or restore the missing file."
+                f"manifest at {self.manifest_path} exists but cache_file "
+                f"{self.cache_path} does not. Delete the manifest or restore "
+                f"the cache file."
             )
         if not manifest_exists:
-            # Fresh cache; manifest gets written on first flush.
+            if cache_exists:
+                # Partial build: jsonl exists from a parallel build that
+                # hasn't reached the parent's final flush. Load entries
+                # (trusted: same code path emitted them) so subsequent
+                # ingest()/put() / flush_manifest() calls can resume.
+                with open(self.cache_path) as f:
+                    for line_no, raw in enumerate(f, start=1):
+                        raw = raw.strip()
+                        if not raw:
+                            continue
+                        try:
+                            obj = json.loads(raw)
+                            sid = str(obj["session_id"])
+                            csum = str(obj["content_sha256"])
+                            parsed = _ExtractedFactList.model_validate(obj["parsed"])
+                        except Exception as e:  # noqa: BLE001
+                            raise CacheManifestMismatchError(
+                                f"corrupt entry at {self.cache_path}:{line_no}: {e!r}"
+                            ) from e
+                        self._entries[(sid, csum)] = parsed
+            # Fresh or partial: manifest gets written on first flush.
             return
 
         with open(self.manifest_path) as f:
@@ -499,8 +535,13 @@ class _PersistentExtractionCache:
             f.write("\n")
         # sha256sum-compatible format so `sha256sum -c CHECKSUMS.sha256`
         # works from data/sem_extract_cache/ for byte-integrity checks.
-        with open(self.checksums_path, "w") as f:
-            f.write(f"{manifest['cache_file_sha256']}  {self.cache_path.name}\n")
+        # Only seed-A (the committed canonical artifact) is recorded
+        # here — seed-B/C are gitignored variance samples and would
+        # clobber the seed-A line if they wrote here too. Their JSONL
+        # sha256 is still stamped into their own manifest.json.
+        if self.seed == "A":
+            with open(self.checksums_path, "w") as f:
+                f.write(f"{manifest['cache_file_sha256']}  {self.cache_path.name}\n")
 
     def _created_at_or_now(self) -> str:
         return datetime.now(timezone.utc).isoformat()

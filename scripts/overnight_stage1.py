@@ -188,19 +188,31 @@ def build_and_verify_seed(seed: str, n_workers: int = 8) -> dict[str, Any]:
 
     # 1b) Sequential recovery (catches OOM'd workers + any parse_errors
     # that the parallel pass missed by virtue of a worker dying).
-    run(["uv", "run", "python", "scripts/build_extract_cache.py", "--seed", seed],
-        f"sequential-recovery seed-{seed}")
+    p_rec = run(["uv", "run", "python", "scripts/build_extract_cache.py", "--seed", seed],
+                f"sequential-recovery seed-{seed}")
+    recovery_ok = p_rec is not None and p_rec.returncode == 0
 
-    # 1c) Identify still-missing sessions (consistent parse_error). Stub.
+    # 1c) Identify still-missing sessions. Stub them ONLY IF sequential
+    # recovery succeeded — otherwise the "missing" set includes
+    # un-attempted sessions (e.g. from an OOM'd worker), and stubbing
+    # those as empty would silently corrupt the cache with sessions
+    # that have no Facts despite never being attempted by the LLM.
+    # The verify gate will catch this; the orchestrator just doesn't
+    # write false stubs.
     smoke_keys = smoke_unique_session_keys()
     stats["unique_smoke_sessions"] = len(smoke_keys)
     cached = cache_unique_keys(REPO / f"data/sem_extract_cache/seed-{seed}.jsonl")
     missing = set(smoke_keys.keys()) - cached
     stats["missing_after_recovery"] = len(missing)
-    if missing:
+    stats["recovery_ok"] = recovery_ok
+    if missing and recovery_ok:
         log(f"  Step 1c: {len(missing)} sessions still missing — stubbing as {{\"facts\": []}}")
         n = stub_missing_as_empty(seed, missing)
         stats["stubbed"] = n
+    elif missing and not recovery_ok:
+        log(f"  Step 1c: {len(missing)} sessions missing but recovery FAILED — refusing to stub "
+            f"(would corrupt cache with un-attempted sessions). Verify will fail; rebuild required.")
+        stats["stubbed"] = 0
     else:
         stats["stubbed"] = 0
 
