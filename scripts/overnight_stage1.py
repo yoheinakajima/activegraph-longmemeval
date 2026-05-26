@@ -191,6 +191,21 @@ def build_and_verify_seed(seed: str, n_workers: int = 8) -> dict[str, Any]:
     p_rec = run(["uv", "run", "python", "scripts/build_extract_cache.py", "--seed", seed],
                 f"sequential-recovery seed-{seed}")
     recovery_ok = p_rec is not None and p_rec.returncode == 0
+    # Defensive: the activegraph runtime catches every LLM-call failure
+    # (including 400 "credit balance too low" responses) as a
+    # behavior.failed event with reason=llm.network_error and lets the
+    # script return 0. If recovery emitted MORE than a handful of those,
+    # treat recovery as failed regardless of return code — stubbing
+    # un-attempted sessions as {"facts": []} would silently corrupt the
+    # cache. Threshold: 20 (well above the typical 3-5 real parse_errors).
+    if p_rec is not None and (p_rec.stderr or p_rec.stdout):
+        text = (p_rec.stderr or "") + (p_rec.stdout or "")
+        n_net = text.count("reason=llm.network_error")
+        if n_net > 20:
+            log(f"  WARN: sequential-recovery seed-{seed} emitted {n_net} "
+                f"llm.network_error events — treating recovery as FAILED to "
+                f"prevent corrupt stubs (likely API credit / rate-limit issue).")
+            recovery_ok = False
 
     # 1c) Identify still-missing sessions. Stub them ONLY IF sequential
     # recovery succeeded — otherwise the "missing" set includes
