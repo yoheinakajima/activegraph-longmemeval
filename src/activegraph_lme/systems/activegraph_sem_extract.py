@@ -46,6 +46,8 @@ import math
 import os
 import re
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import activegraph as ag
@@ -225,22 +227,298 @@ def _sem_extract_handler(
     )
 
 
-def _compute_extractor_signature(
-    prompt_template: str, extractor_model_alias: str
-) -> str:
-    """Hash of the inputs that determine the LLM's parsed output.
+def _compute_prompt_sha256(prompt_template: str) -> str:
+    """Full sha256 hex of the extraction prompt template.
 
-    Used as the third element of the per-session cache key. If either
-    the prompt template or the extractor model alias changes
-    mid-process (shouldn't happen in one run, but defensively),
-    cache lookups under the old signature will simply miss — stale
-    entries can't be served.
+    Used at two places: (1) stamped into the cache manifest at build
+    time, and (2) recomputed at cache-load time and compared against
+    the manifest to refuse stale caches built under a different
+    prompt. Truncated form (first 16 hex chars) is the `extractor_signature`
+    we expose in per-ingest meta — same input, different presentation.
     """
+    return hashlib.sha256(prompt_template.encode("utf-8")).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    """sha256 of a file's bytes, hex-encoded. Used to stamp the cache
+    file's checksum into the manifest + the CHECKSUMS.sha256 sidecar
+    so the committed artifact's integrity is verifiable."""
     h = hashlib.sha256()
-    h.update(prompt_template.encode("utf-8"))
-    h.update(b"\x00")
-    h.update(extractor_model_alias.encode("utf-8"))
-    return h.hexdigest()[:16]
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+# ---- persistent extraction cache --------------------------------------------
+
+
+class CacheManifestMismatchError(RuntimeError):
+    """Raised when a persistent extraction cache's manifest does not
+    match the current prompt template + extractor model alias.
+
+    A committed cache must never silently serve facts from an old
+    prompt or a different model — that would corrupt the experiment
+    by mixing extractions from two different generators. The guard
+    fires at cache-load time (system construction) so the failure is
+    visible before any API spend happens.
+    """
+
+
+class _PersistentExtractionCache:
+    """JSONL-backed per-session extraction cache with a sidecar manifest.
+
+    File layout under ``cache_dir``::
+
+        seed-{seed}.jsonl              # one JSON object per line:
+                                       #   {"session_id", "content_sha256", "parsed"}
+        seed-{seed}.manifest.json      # provenance + invalidation guard
+        CHECKSUMS.sha256               # sha256sum-format integrity record
+
+    Lookup key
+        (session_id, content_sha256) — full sha256 of the session text
+        the prompt is rendered over. The prompt template and extractor
+        model alias are NOT in the per-entry key; they're stamped on
+        the manifest as global invariants and checked at load time.
+        That lets the file format stay flat and the per-entry payload
+        match the runtime's parsed schema 1:1.
+
+    Invalidation guard (CONTRACT)
+        On load, ``prompt_sha256`` and ``extractor_model_requested``
+        from the manifest must match the current
+        ``_EXTRACT_PROMPT_TEMPLATE`` and the system's configured model
+        alias respectively. If either differs we raise
+        :class:`CacheManifestMismatchError` with a message naming the
+        mismatch — never silently serve facts produced under a stale
+        prompt or a different model.
+
+    Write-through semantics
+        ``put()`` appends to the JSONL file synchronously and updates
+        the in-memory dict. The manifest's ``n_entries`` /
+        ``cache_file_sha256`` / ``extractor_model_resolved`` are
+        re-stamped via :meth:`flush_manifest`, which the system calls
+        at the end of each ingest (after the resolved snapshot has
+        been pulled from the post-run event log).
+
+    A cache hit produces byte-identical Fact and ``mentions`` writes
+    to a live miss (the parsed value's schema is identical), so the
+    replay/inspectability contract still holds: every cached Fact has
+    a real ``object.created`` event in ``graph.events`` — the LLM
+    lifecycle prefix (``llm.requested``/``llm.responded``) is what
+    differs.
+    """
+
+    def __init__(
+        self,
+        *,
+        cache_dir: Path,
+        seed: str,
+        prompt_sha256: str,
+        extractor_model_requested: str,
+    ) -> None:
+        self.cache_dir = Path(cache_dir)
+        self.seed = seed
+        self.prompt_sha256 = prompt_sha256
+        self.extractor_model_requested = extractor_model_requested
+        self.cache_path = self.cache_dir / f"seed-{seed}.jsonl"
+        self.manifest_path = self.cache_dir / f"seed-{seed}.manifest.json"
+        self.checksums_path = self.cache_dir / "CHECKSUMS.sha256"
+
+        # In-memory hot dict — keys = (session_id, content_sha256).
+        self._entries: dict[tuple[str, str], _ExtractedFactList] = {}
+        # Resolved snapshot the API actually served, captured lazily
+        # on the first miss within the lifetime of this cache (or
+        # pulled from the manifest on load). All subsequent puts must
+        # carry the same resolved snapshot; mid-cache drift raises.
+        self.extractor_model_resolved: str | None = None
+        # Track newly-added entries this process appended, for stats.
+        self._n_appended_this_process: int = 0
+
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self._load_or_init()
+
+    # ---- lifecycle ----------------------------------------------------------
+
+    def _load_or_init(self) -> None:
+        """Read the manifest + JSONL into memory. Refuse to serve a
+        cache whose manifest was stamped under a different prompt or
+        model alias — see :class:`CacheManifestMismatchError`."""
+        manifest_exists = self.manifest_path.exists()
+        cache_exists = self.cache_path.exists()
+        if manifest_exists != cache_exists:
+            raise CacheManifestMismatchError(
+                f"inconsistent cache state: manifest={manifest_exists!r} "
+                f"cache_file={cache_exists!r} at {self.cache_dir}. "
+                f"Delete both and rebuild, or restore the missing file."
+            )
+        if not manifest_exists:
+            # Fresh cache; manifest gets written on first flush.
+            return
+
+        with open(self.manifest_path) as f:
+            manifest = json.load(f)
+        man_prompt = str(manifest.get("prompt_sha256", ""))
+        man_alias = str(manifest.get("extractor_model_requested", ""))
+        if man_prompt != self.prompt_sha256:
+            raise CacheManifestMismatchError(
+                f"extraction cache at {self.cache_path} was built under a "
+                f"DIFFERENT prompt (manifest prompt_sha256={man_prompt!r}, "
+                f"current prompt_sha256={self.prompt_sha256!r}). Refusing "
+                f"to serve stale facts. Regenerate the cache against the "
+                f"current prompt, or point at a cache built for it."
+            )
+        if man_alias != self.extractor_model_requested:
+            raise CacheManifestMismatchError(
+                f"extraction cache at {self.cache_path} was built with a "
+                f"DIFFERENT extractor model "
+                f"(manifest extractor_model_requested={man_alias!r}, "
+                f"current={self.extractor_model_requested!r}). Refusing "
+                f"to serve facts produced by a different model. Regenerate "
+                f"or point at the right cache."
+            )
+        self.extractor_model_resolved = manifest.get("extractor_model_resolved")
+
+        # Load entries. Lines are JSON objects; tolerate trailing
+        # newlines but reject malformed lines loudly so corruption
+        # surfaces at load time, not on a downstream KeyError.
+        with open(self.cache_path) as f:
+            for line_no, raw in enumerate(f, start=1):
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    obj = json.loads(raw)
+                    sid = str(obj["session_id"])
+                    csum = str(obj["content_sha256"])
+                    parsed = _ExtractedFactList.model_validate(obj["parsed"])
+                except Exception as e:  # noqa: BLE001 — surface corruption
+                    raise CacheManifestMismatchError(
+                        f"corrupt entry at {self.cache_path}:{line_no}: {e!r}"
+                    ) from e
+                self._entries[(sid, csum)] = parsed
+
+    # ---- read ----
+
+    def get(
+        self, session_id: str, content_sha256: str
+    ) -> _ExtractedFactList | None:
+        return self._entries.get((session_id, content_sha256))
+
+    # ---- write ----
+
+    def put(
+        self,
+        session_id: str,
+        content_sha256: str,
+        parsed: _ExtractedFactList,
+        *,
+        extractor_model_resolved: str | None,
+    ) -> None:
+        """Append a new entry (write-through) and update the
+        in-memory hot dict. No-op if the key is already present
+        (idempotent on re-extracts within a single process).
+
+        Append uses ``fcntl.flock`` for cross-process safety so a
+        parallel build (multiple worker processes appending to the
+        same JSONL) cannot interleave bytes mid-line. POSIX O_APPEND
+        is atomic only up to PIPE_BUF (~4KB); a fact-list line can
+        exceed that, so we lock.
+
+        If ``extractor_model_resolved`` is provided and the cache
+        has already pinned a different snapshot, raise — the cache
+        must reflect ONE resolved snapshot end-to-end.
+        """
+        import fcntl
+
+        key = (session_id, content_sha256)
+        if key in self._entries:
+            return
+        if extractor_model_resolved:
+            if self.extractor_model_resolved is None:
+                self.extractor_model_resolved = extractor_model_resolved
+            elif self.extractor_model_resolved != extractor_model_resolved:
+                raise CacheManifestMismatchError(
+                    f"extractor served multiple resolved snapshots within "
+                    f"one cache lifetime: previously pinned "
+                    f"{self.extractor_model_resolved!r}, now seeing "
+                    f"{extractor_model_resolved!r}. Refusing to mix "
+                    f"snapshots in a single cache file."
+                )
+        self._entries[key] = parsed
+        line = json.dumps(
+            {
+                "session_id": session_id,
+                "content_sha256": content_sha256,
+                "parsed": parsed.model_dump(),
+            },
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        with open(self.cache_path, "a") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                f.write(line + "\n")
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        self._n_appended_this_process += 1
+
+    def flush_manifest(self) -> None:
+        """(Re)write the manifest and CHECKSUMS sidecar to reflect
+        the current cache file. Idempotent. Call after each ingest
+        so the manifest's ``n_entries`` / ``cache_file_sha256`` /
+        ``extractor_model_resolved`` stay in sync with the JSONL.
+
+        Suppress per-ingest flush by setting
+        ``ACTIVEGRAPH_SEM_EXTRACT_CACHE_NO_FLUSH=1``. Used by parallel
+        builders where N worker processes append to the same JSONL —
+        the parent process does the single final flush after all
+        workers exit so the manifest isn't races to rewrite.
+        """
+        if os.environ.get("ACTIVEGRAPH_SEM_EXTRACT_CACHE_NO_FLUSH") == "1":
+            return
+        if not self.cache_path.exists():
+            # Nothing to stamp yet (no misses written).
+            return
+        manifest = {
+            "seed": self.seed,
+            "prompt_sha256": self.prompt_sha256,
+            "extractor_model_requested": self.extractor_model_requested,
+            "extractor_model_resolved": self.extractor_model_resolved,
+            "n_entries": len(self._entries),
+            "cache_file": self.cache_path.name,
+            "cache_file_sha256": _sha256_file(self.cache_path),
+            "created_at": (
+                self._created_at_or_now()
+                if not self.manifest_path.exists()
+                else self._existing_manifest_created_at()
+            ),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        with open(self.manifest_path, "w") as f:
+            json.dump(manifest, f, indent=2, sort_keys=True)
+            f.write("\n")
+        # sha256sum-compatible format so `sha256sum -c CHECKSUMS.sha256`
+        # works from data/sem_extract_cache/ for byte-integrity checks.
+        with open(self.checksums_path, "w") as f:
+            f.write(f"{manifest['cache_file_sha256']}  {self.cache_path.name}\n")
+
+    def _created_at_or_now(self) -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def _existing_manifest_created_at(self) -> str:
+        try:
+            with open(self.manifest_path) as f:
+                return str(json.load(f).get("created_at", self._created_at_or_now()))
+        except Exception:  # noqa: BLE001 — defensive
+            return self._created_at_or_now()
+
+    # ---- stats ----
+
+    def __len__(self) -> int:
+        return len(self._entries)
+
+    def n_appended_this_process(self) -> int:
+        return self._n_appended_this_process
 
 
 # ---- system state -----------------------------------------------------------
@@ -272,6 +550,8 @@ class ActiveGraphSemExtractSystem:
         max_doc_freq_fraction: float,
         extractor_model: str = "claude-sonnet-4-5",
         extraction_cache_enabled: bool | None = None,
+        extract_seed: str = "A",
+        extraction_cache_dir: str | Path | None = None,
     ) -> None:
         self.token_budget = token_budget
         self.min_token_length = min_token_length
@@ -282,30 +562,64 @@ class ActiveGraphSemExtractSystem:
         # is what we record into meta.extractor_model_resolved.
         self.extractor_model = extractor_model
 
-        # In-memory per-run session-extraction cache. Lives on this
-        # system instance — NOT module-global, NOT on disk. `cli run`
-        # constructs one ActiveGraphSemExtractSystem and walks all
-        # questions through it, so the cache scopes to a single CLI
-        # invocation; a second `cli run` gets a fresh instance with an
-        # empty cache (preserves determinism and reflects the current
-        # prompt/model at process start).
+        # Persistent per-session extraction cache. The cache file
+        # (data/sem_extract_cache/seed-{A,B,C}.jsonl) is the canonical
+        # frozen experiment input — seed-A is committed to the repo,
+        # seed-B/C are gitignored variance samples. The system reads
+        # the file at construction time and validates its manifest
+        # (prompt_sha256 + extractor_model_requested) against the
+        # current prompt template and configured alias; a mismatch
+        # raises CacheManifestMismatchError before any API spend.
         #
-        # Key: (session_id, sha256(session_text)[:16], extractor_signature)
-        # where extractor_signature hashes the prompt template + model alias,
-        # so a prompt/model change mid-process can't serve a stale entry.
-        # Value: the parsed _ExtractedFactList from the most recent live
-        # extraction of that session under the current signature.
+        # Override the cache state via:
+        #   ACTIVEGRAPH_SEM_EXTRACT_CACHE=0  -> disable persistence and
+        #                                       run cacheless (in-memory
+        #                                       only; useful for variance
+        #                                       measurement or guard
+        #                                       tests).
+        #   extract_seed="B"                 -> point at seed-B file.
+        #   extraction_cache_dir="..."       -> override the cache root
+        #                                       (default: data/sem_extract_cache).
         if extraction_cache_enabled is None:
             extraction_cache_enabled = (
                 os.environ.get("ACTIVEGRAPH_SEM_EXTRACT_CACHE", "1") != "0"
             )
         self._extraction_cache_enabled: bool = extraction_cache_enabled
-        self._extraction_cache: dict[
-            tuple[str, str, str], _ExtractedFactList
-        ] = {}
-        self._extractor_signature: str = _compute_extractor_signature(
-            _EXTRACT_PROMPT_TEMPLATE, self.extractor_model
+        self._extract_seed: str = extract_seed
+        self._extraction_cache_dir: Path = Path(
+            extraction_cache_dir or "data/sem_extract_cache"
         )
+
+        # Per-prompt content hash; doubles as the manifest's
+        # invalidation key. Truncated form (first 16 hex) goes into
+        # per-ingest meta as `extractor_signature` for visibility.
+        self._prompt_sha256: str = _compute_prompt_sha256(
+            _EXTRACT_PROMPT_TEMPLATE
+        )
+        self._extractor_signature: str = self._prompt_sha256[:16]
+
+        self._cache: _PersistentExtractionCache | None = None
+        if self._extraction_cache_enabled:
+            # Load (and validate) on construction. A mismatch raises
+            # CacheManifestMismatchError here — before any LLM call —
+            # so a reviewer sees the staleness immediately. Loads are
+            # cheap (parse a few MB of JSONL) and idempotent across
+            # ingests within one CLI invocation.
+            self._cache = _PersistentExtractionCache(
+                cache_dir=self._extraction_cache_dir,
+                seed=self._extract_seed,
+                prompt_sha256=self._prompt_sha256,
+                extractor_model_requested=self.extractor_model,
+            )
+
+        # In-memory fallback when persistent cache is disabled
+        # (variance/guard testing). Mirrors the persistent cache's
+        # in-memory hot dict so the rest of ingest() doesn't need to
+        # branch on which kind of cache is active.
+        self._memory_only_cache: dict[
+            tuple[str, str], _ExtractedFactList
+        ] = {}
+
         # Cumulative counters across all ingests on this instance
         # (per-ingest counts also go into each ingest's meta).
         self._cum_sessions_total: int = 0
@@ -355,7 +669,10 @@ class ActiveGraphSemExtractSystem:
         # mutations are identical to a live miss for the same session.
         sessions_by_id = self._group_sessions(ingest_state, instance)
         cache_hit_writes: list[tuple[dict, _ExtractedFactList]] = []
-        miss_event_id_to_key: dict[str, tuple[str, str, str]] = {}
+        # Map of miss event_id -> (session_id, content_sha256) so we can
+        # harvest the parsed LLM result out of the post-run event log and
+        # store it under the right cache key.
+        miss_event_id_to_key: dict[str, tuple[str, str]] = {}
         n_sessions_total = 0
         n_cache_hits = 0
         n_sessions_extracted = 0
@@ -371,11 +688,21 @@ class ActiveGraphSemExtractSystem:
             )
             n_sessions_total += 1
 
-            text_hash = hashlib.sha256(session_text.encode("utf-8")).hexdigest()[:16]
-            cache_key = (sid, text_hash, self._extractor_signature)
+            content_sha256 = hashlib.sha256(
+                session_text.encode("utf-8")
+            ).hexdigest()
+            cache_key = (sid, content_sha256)
             cached: _ExtractedFactList | None = None
-            if self._extraction_cache_enabled:
-                cached = self._extraction_cache.get(cache_key)
+            if self._cache is not None:
+                cached = self._cache.get(sid, content_sha256)
+            elif self._extraction_cache_enabled is False:
+                # Persistent cache explicitly disabled — no in-memory
+                # cache either; every session is a miss (variance test).
+                cached = None
+            else:
+                # Defensive: persistent cache not constructed but flag
+                # left enabled — fall back to in-memory hot dict.
+                cached = self._memory_only_cache.get(cache_key)
 
             payload = {
                 "session_id": sid,
@@ -419,12 +746,20 @@ class ActiveGraphSemExtractSystem:
             log.error("Extractor runtime.run_until_idle() raised: %r", exc)
             raise
 
+        # Walk the post-run event log to pull the resolved extractor
+        # snapshot (the dated model the API actually served). Needed
+        # both for cache persistence (the manifest pins this) and for
+        # the per-ingest meta record.
+        extractor_resolved = _resolve_extractor_snapshot(ingest_state.graph)
+
         # Harvest miss results from the event log into the cache, then
         # write Facts for hits (using the same helper as the live
         # handler — identical graph mutations by construction).
-        if self._extraction_cache_enabled and miss_event_id_to_key:
+        if miss_event_id_to_key:
             self._harvest_misses_into_cache(
-                ingest_state.graph, miss_event_id_to_key
+                ingest_state.graph,
+                miss_event_id_to_key,
+                extractor_resolved,
             )
 
         # CACHE-HIT WRITES: still emit real object.created /
@@ -454,9 +789,13 @@ class ActiveGraphSemExtractSystem:
         self._cum_sessions_extracted += n_sessions_extracted
         self._cum_cache_hits += n_cache_hits
 
-        # Walk the post-run event log to pull the resolved extractor
-        # snapshot (the dated model the API actually served).
-        extractor_resolved = _resolve_extractor_snapshot(ingest_state.graph)
+        # Re-stamp the manifest + CHECKSUMS sidecar so the on-disk
+        # cache_file_sha256 / n_entries / extractor_model_resolved
+        # stay in sync with the JSONL file we've been appending to.
+        # Cheap: rewrites two small files.
+        if self._cache is not None and n_sessions_extracted > 0:
+            self._cache.flush_manifest()
+
         n_facts = sum(1 for _ in ingest_state.graph.objects(type="Fact"))
         n_fact_events = sum(
             1 for e in ingest_state.graph.events if e.type == "object.created"
@@ -482,6 +821,19 @@ class ActiveGraphSemExtractSystem:
             # and see the savings as the cache warms across questions.
             "extraction_cache_enabled": self._extraction_cache_enabled,
             "extractor_signature": self._extractor_signature,
+            "prompt_sha256": self._prompt_sha256,
+            "extract_seed": self._extract_seed,
+            "extraction_cache_path": (
+                str(self._cache.cache_path) if self._cache is not None else None
+            ),
+            "n_cache_entries_loaded_at_init": (
+                len(self._cache) - self._cache.n_appended_this_process()
+                if self._cache is not None else 0
+            ),
+            "n_cache_appended_this_process": (
+                self._cache.n_appended_this_process()
+                if self._cache is not None else 0
+            ),
             "n_sessions_total": n_sessions_total,
             "n_sessions_extracted": n_sessions_extracted,
             "n_cache_hits": n_cache_hits,
@@ -496,11 +848,14 @@ class ActiveGraphSemExtractSystem:
     def _harvest_misses_into_cache(
         self,
         graph: ag.Graph,
-        miss_event_id_to_key: dict[str, tuple[str, str, str]],
+        miss_event_id_to_key: dict[str, tuple[str, str]],
+        extractor_resolved: str | None,
     ) -> None:
-        """Walk the post-run event log and record each cache miss's
-        parsed LLM output into ``self._extraction_cache`` so the next
-        question's matching session hits the cache instead of the API.
+        """Walk the post-run event log and persist each cache miss's
+        parsed LLM output so the next time the same session text
+        appears (within this run OR across `cli run` invocations,
+        once the file is committed) it hits the cache instead of the
+        API.
 
         Event chain (per the runtime's @llm_behavior invocation path):
           extract_request  ← caused_by ←  llm.requested  ← caused_by ←  llm.responded
@@ -529,7 +884,18 @@ class ActiveGraphSemExtractSystem:
                 parsed = _ExtractedFactList.model_validate(parsed_payload)
             except Exception:  # noqa: BLE001 — defensive; bad parse means no caching
                 continue
-            self._extraction_cache[cache_key] = parsed
+            sid, csum = cache_key
+            if self._cache is not None:
+                self._cache.put(
+                    sid,
+                    csum,
+                    parsed,
+                    extractor_model_resolved=extractor_resolved,
+                )
+            else:
+                # Persistent cache disabled; fall back to the in-process
+                # memory dict (variance/guard testing path).
+                self._memory_only_cache[cache_key] = parsed
 
     # ---- retrieve -----------------------------------------------------------
 

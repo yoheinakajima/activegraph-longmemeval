@@ -86,6 +86,17 @@ def main() -> None:
         "off (warn-only) for --smoke."
     ),
 )
+@click.option(
+    "--extract-seed",
+    type=click.Choice(["A", "B", "C"]),
+    default="A",
+    show_default=True,
+    help=(
+        "Frozen extraction-cache seed for activegraph-sem-extract. seed-A is "
+        "the committed canonical cache; seed-B/C are gitignored variance "
+        "samples. Other systems ignore this flag."
+    ),
+)
 def run_cmd(
     system_name: str,
     dataset_key: str,
@@ -94,6 +105,7 @@ def run_cmd(
     limit: int | None,
     run_id: str | None,
     require_auth_tokens: bool | None,
+    extract_seed: str,
 ) -> None:
     cfg = load_config(config_path)
     dataset_path = Path(cfg.datasets[dataset_key])
@@ -131,7 +143,7 @@ def run_cmd(
         temperature=cfg.reader.temperature,
         max_tokens=cfg.reader.max_tokens,
     )
-    system = build_system(system_name, cfg)
+    system = build_system(system_name, cfg, extract_seed=extract_seed)
 
     rid = run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     tag = "smoke" if smoke else "full"

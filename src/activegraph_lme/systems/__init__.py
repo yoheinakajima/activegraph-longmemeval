@@ -7,7 +7,7 @@ from .rag_bm25 import RagBM25
 from .rag_dense import RagDense
 
 
-def build_system(name: str, cfg) -> System:
+def build_system(name: str, cfg, *, extract_seed: str = "A") -> System:
     if name == "full-context-oracle":
         return FullContextOracle()
     if name == "full-context-s":
@@ -42,6 +42,7 @@ def build_system(name: str, cfg) -> System:
             min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
             max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
             extractor_model=cfg.reader.model,
+            extract_seed=extract_seed,
         )
     raise ValueError(f"Unknown system: {name}")
 
