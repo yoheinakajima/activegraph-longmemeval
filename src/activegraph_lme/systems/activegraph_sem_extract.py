@@ -49,6 +49,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import activegraph as ag
+from activegraph.runtime.behavior_graph import BehaviorGraph
 from pydantic import BaseModel, Field
 
 from ..activegraph.graph import IngestState, Turn, build_graph
@@ -131,6 +132,56 @@ Rules:
 """
 
 
+def _write_facts_to_graph(
+    bgraph: Any,
+    parsed: _ExtractedFactList,
+    *,
+    session_id: str,
+    session_date: str,
+    session_idx: int,
+    turn_object_ids: list[str],
+) -> None:
+    """Write Fact + mentions edges for one session's extraction result.
+
+    Shared by both the live @llm_behavior handler (on a cache miss,
+    after the LLM call) and the in-memory session-extraction cache
+    (on a cache hit, skipping the LLM call). Identical output by
+    construction — both paths feed the same `parsed` shape into the
+    same writes, so a cached hit produces byte-identical Fact ids and
+    mentions edges to a live miss for the same session text.
+
+    Determinism for replay: fact ids are content-hashed
+    (``fact:<sha256(session_id|text)[:16]>``) so the same session text
+    re-extracted into the same Fact text yields the same fact_id —
+    regardless of whether the parsed value came from the live API or
+    the cache.
+    """
+    n_turns = len(turn_object_ids)
+    for fact in parsed.facts:
+        text = (fact.text or "").strip()
+        if not text:
+            continue
+        h = hashlib.sha256(f"{session_id}|{text}".encode("utf-8")).hexdigest()[:16]
+        fact_id = f"fact:{h}"
+
+        fact_obj = bgraph.add_object(
+            "Fact",
+            {
+                "fact_id": fact_id,
+                "text": text,
+                "session_id": session_id,
+                "session_date": session_date,
+                "session_idx": session_idx,
+                "source": "llm_extract",
+            },
+        )
+
+        for idx in fact.mentioned_turn_idxs:
+            if not isinstance(idx, int) or idx < 0 or idx >= n_turns:
+                continue
+            bgraph.add_relation(fact_obj.id, turn_object_ids[idx], "mentions")
+
+
 @ag.llm_behavior(
     name=_EXTRACTOR_BEHAVIOR_NAME,
     on=[_EXTRACT_REQUEST_TYPE],
@@ -157,42 +208,39 @@ def _sem_extract_handler(
     ctx: Any,
     parsed: _ExtractedFactList,
 ) -> None:
-    """Write Fact + mentions edges into the package graph.
-
-    Determinism for replay: fact ids are content-hashed
-    (``fact:<sha256(session_id|text)[:16]>``) so the same session text
-    re-extracted into the same Fact text yields the same fact_id.
+    """Live-API path: invoked by the runtime on a cache miss after the
+    LLM has produced a parsed _ExtractedFactList. All Fact-writing is
+    delegated to :func:`_write_facts_to_graph` so the cache-hit path
+    (which skips the LLM but still must produce identical writes) calls
+    exactly the same code.
     """
     payload = event.payload or {}
-    session_id = str(payload.get("session_id", ""))
-    session_date = str(payload.get("session_date", ""))
-    session_idx = int(payload.get("session_idx", 0))
-    turn_object_ids: list[str] = list(payload.get("turn_object_ids", []))
-    n_turns = len(turn_object_ids)
+    _write_facts_to_graph(
+        bgraph,
+        parsed,
+        session_id=str(payload.get("session_id", "")),
+        session_date=str(payload.get("session_date", "")),
+        session_idx=int(payload.get("session_idx", 0)),
+        turn_object_ids=list(payload.get("turn_object_ids", [])),
+    )
 
-    for fact in parsed.facts:
-        text = (fact.text or "").strip()
-        if not text:
-            continue
-        h = hashlib.sha256(f"{session_id}|{text}".encode("utf-8")).hexdigest()[:16]
-        fact_id = f"fact:{h}"
 
-        fact_obj = bgraph.add_object(
-            "Fact",
-            {
-                "fact_id": fact_id,
-                "text": text,
-                "session_id": session_id,
-                "session_date": session_date,
-                "session_idx": session_idx,
-                "source": "llm_extract",
-            },
-        )
+def _compute_extractor_signature(
+    prompt_template: str, extractor_model_alias: str
+) -> str:
+    """Hash of the inputs that determine the LLM's parsed output.
 
-        for idx in fact.mentioned_turn_idxs:
-            if not isinstance(idx, int) or idx < 0 or idx >= n_turns:
-                continue
-            bgraph.add_relation(fact_obj.id, turn_object_ids[idx], "mentions")
+    Used as the third element of the per-session cache key. If either
+    the prompt template or the extractor model alias changes
+    mid-process (shouldn't happen in one run, but defensively),
+    cache lookups under the old signature will simply miss — stale
+    entries can't be served.
+    """
+    h = hashlib.sha256()
+    h.update(prompt_template.encode("utf-8"))
+    h.update(b"\x00")
+    h.update(extractor_model_alias.encode("utf-8"))
+    return h.hexdigest()[:16]
 
 
 # ---- system state -----------------------------------------------------------
@@ -223,6 +271,7 @@ class ActiveGraphSemExtractSystem:
         min_session_cooccurrence: int,
         max_doc_freq_fraction: float,
         extractor_model: str = "claude-sonnet-4-5",
+        extraction_cache_enabled: bool | None = None,
     ) -> None:
         self.token_budget = token_budget
         self.min_token_length = min_token_length
@@ -232,6 +281,36 @@ class ActiveGraphSemExtractSystem:
         # this to AnthropicProvider; the dated snapshot the API serves
         # is what we record into meta.extractor_model_resolved.
         self.extractor_model = extractor_model
+
+        # In-memory per-run session-extraction cache. Lives on this
+        # system instance — NOT module-global, NOT on disk. `cli run`
+        # constructs one ActiveGraphSemExtractSystem and walks all
+        # questions through it, so the cache scopes to a single CLI
+        # invocation; a second `cli run` gets a fresh instance with an
+        # empty cache (preserves determinism and reflects the current
+        # prompt/model at process start).
+        #
+        # Key: (session_id, sha256(session_text)[:16], extractor_signature)
+        # where extractor_signature hashes the prompt template + model alias,
+        # so a prompt/model change mid-process can't serve a stale entry.
+        # Value: the parsed _ExtractedFactList from the most recent live
+        # extraction of that session under the current signature.
+        if extraction_cache_enabled is None:
+            extraction_cache_enabled = (
+                os.environ.get("ACTIVEGRAPH_SEM_EXTRACT_CACHE", "1") != "0"
+            )
+        self._extraction_cache_enabled: bool = extraction_cache_enabled
+        self._extraction_cache: dict[
+            tuple[str, str, str], _ExtractedFactList
+        ] = {}
+        self._extractor_signature: str = _compute_extractor_signature(
+            _EXTRACT_PROMPT_TEMPLATE, self.extractor_model
+        )
+        # Cumulative counters across all ingests on this instance
+        # (per-ingest counts also go into each ingest's meta).
+        self._cum_sessions_total: int = 0
+        self._cum_sessions_extracted: int = 0
+        self._cum_cache_hits: int = 0
 
     # ---- ingest -------------------------------------------------------------
 
@@ -267,10 +346,20 @@ class ActiveGraphSemExtractSystem:
         # downstream replay/debug walks the same instance.
         ingest_state.runtime = runtime
 
-        # Emit one extract-request event per session, in input order.
-        # The runtime's FIFO scheduler will then fan them through the
-        # extraction behavior.
+        # Partition sessions into cache hits / misses BEFORE driving
+        # the reaction loop. Misses emit a session.extract_request the
+        # behavior fires on (live LLM call). Hits skip the emit (and so
+        # skip the LLM call entirely) — we write their Facts directly
+        # after run_until_idle, using the same _write_facts_to_graph
+        # helper the live handler uses, so the per-session graph
+        # mutations are identical to a live miss for the same session.
         sessions_by_id = self._group_sessions(ingest_state, instance)
+        cache_hit_writes: list[tuple[dict, _ExtractedFactList]] = []
+        miss_event_id_to_key: dict[str, tuple[str, str, str]] = {}
+        n_sessions_total = 0
+        n_cache_hits = 0
+        n_sessions_extracted = 0
+
         for sid, sdate, s_idx in zip(
             instance.haystack_session_ids,
             instance.haystack_dates,
@@ -280,20 +369,45 @@ class ActiveGraphSemExtractSystem:
             session_text = "\n".join(
                 f"[turn {tv.turn_idx}] {tv.role}: {tv.content}" for tv in turn_views
             )
-            evt = ag.Event(
-                id=ingest_state.graph.ids.event(),
-                type=_EXTRACT_REQUEST_TYPE,
-                payload={
-                    "session_id": sid,
-                    "session_date": sdate,
-                    "session_idx": s_idx,
-                    "session_text": session_text,
-                    "turn_object_ids": [tv.object_id for tv in turn_views],
-                    "n_turns": len(turn_views),
-                },
-                actor="sem_extract_ingest",
-            )
-            ingest_state.graph.emit(evt)
+            n_sessions_total += 1
+
+            text_hash = hashlib.sha256(session_text.encode("utf-8")).hexdigest()[:16]
+            cache_key = (sid, text_hash, self._extractor_signature)
+            cached: _ExtractedFactList | None = None
+            if self._extraction_cache_enabled:
+                cached = self._extraction_cache.get(cache_key)
+
+            payload = {
+                "session_id": sid,
+                "session_date": sdate,
+                "session_idx": s_idx,
+                "session_text": session_text,
+                "turn_object_ids": [tv.object_id for tv in turn_views],
+                "n_turns": len(turn_views),
+            }
+
+            if cached is not None:
+                # CACHE HIT: skip the extract_request emit so the
+                # behavior never fires for this session. Defer the
+                # Fact-writing until after run_until_idle so the
+                # event log shows misses first (preserving the FIFO
+                # order of live extractions), then hits.
+                n_cache_hits += 1
+                cache_hit_writes.append((payload, cached))
+            else:
+                # CACHE MISS: emit the event the @llm_behavior listens
+                # to. The runtime will assemble the prompt, call the
+                # provider, parse the structured output, and invoke
+                # _sem_extract_handler with the parsed result.
+                n_sessions_extracted += 1
+                evt = ag.Event(
+                    id=ingest_state.graph.ids.event(),
+                    type=_EXTRACT_REQUEST_TYPE,
+                    payload=payload,
+                    actor="sem_extract_ingest",
+                )
+                miss_event_id_to_key[evt.id] = cache_key
+                ingest_state.graph.emit(evt)
 
         # Drive the package's reaction loop. If extraction can't reach
         # the LLM (e.g. ANTHROPIC_API_KEY unset in this environment) the
@@ -304,6 +418,41 @@ class ActiveGraphSemExtractSystem:
         except Exception as exc:  # noqa: BLE001 — surface so harness can stop
             log.error("Extractor runtime.run_until_idle() raised: %r", exc)
             raise
+
+        # Harvest miss results from the event log into the cache, then
+        # write Facts for hits (using the same helper as the live
+        # handler — identical graph mutations by construction).
+        if self._extraction_cache_enabled and miss_event_id_to_key:
+            self._harvest_misses_into_cache(
+                ingest_state.graph, miss_event_id_to_key
+            )
+
+        # CACHE-HIT WRITES: still emit real object.created /
+        # relation.created events through a BehaviorGraph tagged with
+        # the extractor's actor name. The LLM call is skipped — the
+        # graph mutations are not. This preserves the package's
+        # replay/inspectability contract: every Fact in the graph has
+        # a real object.created event sitting in graph.events.
+        for payload, cached in cache_hit_writes:
+            hit_bgraph = BehaviorGraph(
+                ingest_state.graph,
+                actor=_EXTRACTOR_BEHAVIOR_NAME,
+                caused_by=None,
+                frame_id=None,
+            )
+            _write_facts_to_graph(
+                hit_bgraph,
+                cached,
+                session_id=str(payload["session_id"]),
+                session_date=str(payload["session_date"]),
+                session_idx=int(payload["session_idx"]),
+                turn_object_ids=list(payload["turn_object_ids"]),
+            )
+
+        # Update cumulative counters on the system instance.
+        self._cum_sessions_total += n_sessions_total
+        self._cum_sessions_extracted += n_sessions_extracted
+        self._cum_cache_hits += n_cache_hits
 
         # Walk the post-run event log to pull the resolved extractor
         # snapshot (the dated model the API actually served).
@@ -327,8 +476,60 @@ class ActiveGraphSemExtractSystem:
             "extractor_model_requested": self.extractor_model,
             "extractor_model_resolved": extractor_resolved,
             "behaviors_registered": behaviors_registered,
+            # Session-extraction cache visibility. Per-ingest counts plus
+            # cumulative-on-this-system-instance so a reviewer can
+            # confirm `n_sessions_extracted + n_cache_hits == n_sessions_total`
+            # and see the savings as the cache warms across questions.
+            "extraction_cache_enabled": self._extraction_cache_enabled,
+            "extractor_signature": self._extractor_signature,
+            "n_sessions_total": n_sessions_total,
+            "n_sessions_extracted": n_sessions_extracted,
+            "n_cache_hits": n_cache_hits,
+            "cum_sessions_total": self._cum_sessions_total,
+            "cum_sessions_extracted": self._cum_sessions_extracted,
+            "cum_cache_hits": self._cum_cache_hits,
         }
         return _SemState(state=ingest_state, meta=meta)
+
+    # ---- cache harvest ------------------------------------------------------
+
+    def _harvest_misses_into_cache(
+        self,
+        graph: ag.Graph,
+        miss_event_id_to_key: dict[str, tuple[str, str, str]],
+    ) -> None:
+        """Walk the post-run event log and record each cache miss's
+        parsed LLM output into ``self._extraction_cache`` so the next
+        question's matching session hits the cache instead of the API.
+
+        Event chain (per the runtime's @llm_behavior invocation path):
+          extract_request  ← caused_by ←  llm.requested  ← caused_by ←  llm.responded
+        We look up llm.responded events for our behavior, walk back via
+        ``caused_by`` two hops, and pull the parsed payload.
+        """
+        events_by_id: dict[str, Any] = {e.id: e for e in graph.events}
+        for ev in graph.events:
+            if ev.type != "llm.responded":
+                continue
+            if ev.payload.get("behavior") != _EXTRACTOR_BEHAVIOR_NAME:
+                continue
+            req = events_by_id.get(ev.caused_by) if ev.caused_by else None
+            if req is None or req.type != "llm.requested":
+                continue
+            extract_req = events_by_id.get(req.caused_by) if req.caused_by else None
+            if extract_req is None or extract_req.type != _EXTRACT_REQUEST_TYPE:
+                continue
+            cache_key = miss_event_id_to_key.get(extract_req.id)
+            if cache_key is None:
+                continue
+            parsed_payload = ev.payload.get("parsed")
+            if parsed_payload is None:
+                continue
+            try:
+                parsed = _ExtractedFactList.model_validate(parsed_payload)
+            except Exception:  # noqa: BLE001 — defensive; bad parse means no caching
+                continue
+            self._extraction_cache[cache_key] = parsed
 
     # ---- retrieve -----------------------------------------------------------
 
