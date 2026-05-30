@@ -258,6 +258,26 @@ def main() -> int:
                 selected_turn_ids, selected_fact_ids = _partition_unit_ids(selected_unit_ids)
                 selected_session_ids = sorted({tid.rsplit("#", 1)[0] for tid in selected_turn_ids})
 
+            elif system_name in ("activegraph-sem-hybrid", "activegraph-sem-index"):
+                # Both compiled-memory variants expose their selected turn /
+                # fact ids directly on retrieve().meta, so we read those
+                # rather than re-deriving selection. Assembly is pure given
+                # the (content-addressed, cached) embedding scores, so a
+                # repeat retrieve() is byte-identical — assert it.
+                ctx = system.retrieve(state, inst.question, inst.question_date)
+                ctx2 = system.retrieve(state, inst.question, inst.question_date)
+                if ctx2.text != ctx.text:
+                    raise SystemExit(
+                        f"Non-deterministic {system_name} retrieve on "
+                        f"{inst.question_id}; refusing to record."
+                    )
+                meta = ctx.meta or {}
+                selected_turn_ids = list(meta.get("selected_turn_ids", []))
+                selected_fact_ids = list(meta.get("selected_fact_ids", []))
+                selected_session_ids = sorted(
+                    {tid.rsplit("#", 1)[0] for tid in selected_turn_ids}
+                )
+
             elif system_name in ("rag-bm25", "rag-dense"):
                 if system_name == "rag-dense":
                     sel_pairs, sel_text = _rag_dense_select(system, state, inst.question, inst)

@@ -265,15 +265,143 @@ def _ag_embedding_skip_or_smoke(cfg) -> tuple[str, str]:
         return (SKIP, "activegraph-det-embedding skipped (OPENAI_API_KEY not set)")
     inst = _make_instance_for_activegraph()
     sysobj = build_system("activegraph-det-embedding", cfg)
-    st = sysobj.ingest(inst)
-    a = sysobj.retrieve(st, inst.question, inst.question_date)
-    b = sysobj.retrieve(st, inst.question, inst.question_date)
+    try:
+        st = sysobj.ingest(inst)
+        a = sysobj.retrieve(st, inst.question, inst.question_date)
+        b = sysobj.retrieve(st, inst.question, inst.question_date)
+    except Exception as e:  # noqa: BLE001
+        # Embedding endpoint unreachable (e.g. OpenAI host not in the
+        # environment's egress allowlist). Record an explicit skip rather
+        # than a failure — the embedding path is simply not exercisable here.
+        if "allowlist" in str(e).lower() or e.__class__.__name__ in (
+            "PermissionDeniedError", "APIConnectionError", "APITimeoutError",
+        ):
+            return (SKIP, f"activegraph-det-embedding skipped ({e.__class__.__name__}: "
+                          f"OpenAI endpoint unreachable from this environment)")
+        raise
     deterministic = a.text == b.text
     has_evidence = "Mochi" in a.text
     ok = deterministic and has_evidence
     return (PASS if ok else FAIL,
             f"activegraph-det-embedding (deterministic={deterministic}, "
             f"has_evidence={has_evidence})")
+
+
+# ---- compiled semantic-memory assembly tests (offline, injected scores) -----
+
+
+def _build_fact_graph(cfg):
+    """Build a small turn graph and hand-write two Facts + `mentions` edges
+    so the compiled-memory assemblers can be exercised with INJECTED scores
+    (no embedding API). Returns (_SemState, fact_id_by_label)."""
+    from activegraph_lme.systems.activegraph_sem_extract import _SemState
+
+    inst = _make_instance_for_activegraph()
+    state = build_graph(
+        inst.haystack_session_ids,
+        inst.haystack_dates,
+        inst.haystack_sessions,
+        min_token_length=cfg.activegraph.min_token_length,
+        min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+        max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+    )
+    # Fact CAT -> the user turn in s_evidence (turn 0); Fact GUITAR -> the
+    # user turn in s_unrelated (turn 0). Distinct sessions so chronology is
+    # testable.
+    ev_turn = state.by_turn_id["s_evidence#0"]
+    un_turn = state.by_turn_id["s_unrelated#0"]
+    f_cat = state.graph.add_object(
+        "Fact",
+        {"fact_id": "fact:cat", "text": "The user adopted a kitten named Mochi.",
+         "session_id": "s_evidence", "session_date": "2025-04-20", "session_idx": 1},
+    )
+    state.graph.add_relation(f_cat.id, ev_turn.object_id, "mentions")
+    f_guitar = state.graph.add_object(
+        "Fact",
+        {"fact_id": "fact:guitar", "text": "The user is learning guitar chords.",
+         "session_id": "s_unrelated", "session_date": "2025-05-10", "session_idx": 2},
+    )
+    state.graph.add_relation(f_guitar.id, un_turn.object_id, "mentions")
+    return _SemState(state=state, meta={}), {"cat": "fact:cat", "guitar": "fact:guitar"}
+
+
+def _sem_hybrid_assembly(cfg) -> tuple[str, str]:
+    from activegraph_lme.systems.activegraph_sem_hybrid import (
+        ActiveGraphSemHybridSystem,
+    )
+    from activegraph_lme.systems._sem_compiled import project_facts
+
+    sem_state, _ = _build_fact_graph(cfg)
+    sys = ActiveGraphSemHybridSystem(
+        token_budget=2500, min_token_length=cfg.activegraph.min_token_length,
+        min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+        max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+        extraction_cache_dir="/tmp/_pt_nocache",
+    )
+    facts = project_facts(sem_state.state)
+    scores = {"fact:cat": 0.9, "fact:guitar": 0.1}
+    a = sys._assemble(sem_state, facts, scores)
+    b = sys._assemble(sem_state, facts, scores)
+    has_header = "[fact: The user adopted a kitten named Mochi.]" in a.text
+    has_anchor = "adopted a kitten" in a.text.lower()  # provenance turn text
+    # Chronological: the cat fact (session_idx 1) precedes guitar (idx 2).
+    chrono = a.text.index("Mochi.]") < a.text.index("guitar chords.]")
+    deterministic = a.text == b.text
+    meta_ok = a.meta["n_facts_selected"] == 2 and a.meta["n_unique_turns_rendered"] == 2
+    ok = has_header and has_anchor and chrono and deterministic and meta_ok
+    return (PASS if ok else FAIL,
+            f"sem-hybrid assembly (header={has_header}, anchor={has_anchor}, "
+            f"chrono={chrono}, deterministic={deterministic}, meta_ok={meta_ok})")
+
+
+def _sem_hybrid_budget(cfg) -> tuple[str, str]:
+    from activegraph_lme.systems.activegraph_sem_hybrid import (
+        ActiveGraphSemHybridSystem,
+    )
+    from activegraph_lme.systems._sem_compiled import project_facts
+
+    sem_state, _ = _build_fact_graph(cfg)
+    # Budget tight enough for one fact+anchor but not two -> truncated, and
+    # only the top-scored (cat) fact survives.
+    sys = ActiveGraphSemHybridSystem(
+        token_budget=45, min_token_length=cfg.activegraph.min_token_length,
+        min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+        max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+        extraction_cache_dir="/tmp/_pt_nocache",
+    )
+    facts = project_facts(sem_state.state)
+    a = sys._assemble(sem_state, facts, {"fact:cat": 0.9, "fact:guitar": 0.1})
+    ok = a.truncated and a.meta["n_facts_selected"] == 1 and "Mochi.]" in a.text
+    return (PASS if ok else FAIL,
+            f"sem-hybrid budget (truncated={a.truncated}, "
+            f"n_facts_selected={a.meta['n_facts_selected']})")
+
+
+def _sem_index_assembly(cfg) -> tuple[str, str]:
+    from activegraph_lme.systems.activegraph_sem_index import (
+        ActiveGraphSemIndexSystem,
+    )
+    from activegraph_lme.systems._sem_compiled import project_facts
+
+    sem_state, _ = _build_fact_graph(cfg)
+    sys = ActiveGraphSemIndexSystem(
+        token_budget=2500, min_token_length=cfg.activegraph.min_token_length,
+        min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+        max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+        extraction_cache_dir="/tmp/_pt_nocache",
+    )
+    facts = project_facts(sem_state.state)
+    a = sys._assemble(sem_state, facts, {"fact:cat": 0.9, "fact:guitar": 0.1})
+    b = sys._assemble(sem_state, facts, {"fact:cat": 0.9, "fact:guitar": 0.1})
+    no_facts_in_text = "[fact:" not in a.text  # reader never sees facts
+    has_turn = "adopted a kitten" in a.text.lower()
+    deterministic = a.text == b.text
+    selected_via_fact = a.meta["n_facts_selected"] == 2
+    ok = no_facts_in_text and has_turn and deterministic and selected_via_fact
+    return (PASS if ok else FAIL,
+            f"sem-index assembly (no_facts_in_text={no_facts_in_text}, "
+            f"has_turn={has_turn}, deterministic={deterministic}, "
+            f"selected_via_fact={selected_via_fact})")
 
 
 def main() -> int:
@@ -307,6 +435,11 @@ def main() -> int:
     results.append(_ag_lexical_finds_evidence(cfg))
     results.append(_ag_temporal_expansion(cfg))
     results.append(_ag_embedding_skip_or_smoke(cfg))
+
+    # Compiled semantic-memory assembly (offline, injected scores — no API).
+    results.append(_sem_hybrid_assembly(cfg))
+    results.append(_sem_hybrid_budget(cfg))
+    results.append(_sem_index_assembly(cfg))
 
     n_fail = 0
     for status, msg in results:

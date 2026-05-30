@@ -1,5 +1,7 @@
 from .activegraph_det import ActiveGraphDetSystem
 from .activegraph_sem_extract import ActiveGraphSemExtractSystem
+from .activegraph_sem_hybrid import ActiveGraphSemHybridSystem
+from .activegraph_sem_index import ActiveGraphSemIndexSystem
 from .base import AssembledContext, System
 from .full_context_oracle import FullContextOracle
 from .full_context_s import FullContextS
@@ -44,6 +46,25 @@ def build_system(name: str, cfg, *, extract_seed: str = "A") -> System:
             extractor_model=cfg.reader.model,
             extract_seed=extract_seed,
         )
+    if name in ("activegraph-sem-hybrid", "activegraph-sem-index"):
+        # Both compiled-memory variants share ingest (seed-A cache, zero
+        # extraction calls) and the embedding signal over the Fact pool;
+        # they differ only in assemble(). The embedding model matches
+        # det-embedding's so the retrieval-signal comparison is clean.
+        cls = (
+            ActiveGraphSemHybridSystem
+            if name == "activegraph-sem-hybrid"
+            else ActiveGraphSemIndexSystem
+        )
+        return cls(
+            token_budget=cfg.activegraph.token_budget,
+            min_token_length=cfg.activegraph.min_token_length,
+            min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+            max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+            extractor_model=cfg.reader.model,
+            extract_seed=extract_seed,
+            embedding_model=cfg.embeddings.model,
+        )
     raise ValueError(f"Unknown system: {name}")
 
 
@@ -56,5 +77,7 @@ __all__ = [
     "RagDense",
     "ActiveGraphDetSystem",
     "ActiveGraphSemExtractSystem",
+    "ActiveGraphSemHybridSystem",
+    "ActiveGraphSemIndexSystem",
     "build_system",
 ]
