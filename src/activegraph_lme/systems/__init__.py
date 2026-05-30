@@ -9,7 +9,7 @@ from .rag_bm25 import RagBM25
 from .rag_dense import RagDense
 
 
-def build_system(name: str, cfg, *, extract_seed: str = "A") -> System:
+def build_system(name: str, cfg, *, extract_seed: str = "A-v2") -> System:
     if name == "full-context-oracle":
         return FullContextOracle()
     if name == "full-context-s":

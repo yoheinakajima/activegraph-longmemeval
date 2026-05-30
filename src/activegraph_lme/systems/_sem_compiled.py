@@ -142,7 +142,7 @@ class _SemCompiledBase:
         min_session_cooccurrence: int,
         max_doc_freq_fraction: float,
         extractor_model: str = "claude-sonnet-4-5",
-        extract_seed: str = "A",
+        extract_seed: str = "A-v2",
         embedding_model: str = "text-embedding-3-small",
         extraction_cache_dir: str | Path | None = None,
     ) -> None:

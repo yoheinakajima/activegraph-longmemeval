@@ -70,6 +70,22 @@ log = logging.getLogger(__name__)
 
 _EXTRACT_REQUEST_TYPE = "session.extract_request"
 _EXTRACTOR_BEHAVIOR_NAME = "sem_extract_facts_from_session"
+_EXTRACTOR_BEHAVIOR_NAME_ASSISTANT = "sem_extract_facts_from_session_assistant"
+
+# Each extractor behavior emits Facts authored by a different conversational
+# role. The role is stamped onto every Fact's ``data["role"]`` and is part of
+# the cache key (the same session text now yields two extraction results).
+# user-centric facts answer "what did the USER tell us"; assistant-centric
+# facts answer "what did the ASSISTANT previously say/recommend/compute" —
+# the latter is what ss-assistant questions need and the original
+# user-only extractor never produced.
+_BEHAVIOR_ROLE = {
+    _EXTRACTOR_BEHAVIOR_NAME: "user",
+    _EXTRACTOR_BEHAVIOR_NAME_ASSISTANT: "assistant",
+}
+# Reverse map (role -> behavior name) for tagging cache-hit Fact writes
+# with the actor that would have produced them on a live miss.
+_ROLE_BEHAVIOR = {role: name for name, role in _BEHAVIOR_ROLE.items()}
 
 
 # ---- LLM output schema ------------------------------------------------------
@@ -134,6 +150,45 @@ Rules:
 """
 
 
+# Assistant-authored counterpart to _EXTRACT_PROMPT_TEMPLATE. Same envelope
+# (system / event / instruction / Rules) and the SAME _ExtractedFactList
+# schema, but it extracts what the ASSISTANT contributed rather than facts
+# about the user. ss-assistant questions ("what did you recommend for X?",
+# "what number did you give me?") are answered by these facts; the
+# user-centric extractor emits nothing answer-bearing for them.
+_EXTRACT_PROMPT_TEMPLATE_ASSISTANT = """\
+{system}
+
+Session under review:
+{event}
+
+Task:
+{instruction}
+
+Rules:
+- Only extract facts that the session text directly supports.
+- One claim per fact. Split compound claims.
+- Extract ONLY facts about what the ASSISTANT contributed in this session:
+  the things the assistant recommended, suggested, computed, calculated,
+  defined, explained, named, listed, or told the user. These are facts
+  about the assistant's OUTPUT, the content a later question might ask the
+  assistant to recall ("what did you recommend / say / compute?").
+- Use neutral third-person phrasing beginning with "The assistant ..."
+  ("The assistant recommended ...", "The assistant computed ...",
+  "The assistant told the user that ...", "The assistant suggested ...").
+- Capture the SUBSTANCE the assistant provided, not the act of helping:
+  prefer "The assistant recommended the Osprey Atmos 65 backpack" over
+  "The assistant helped the user pick a backpack". Include the specific
+  values/names/items so the fact is answer-bearing on its own.
+- Do NOT extract facts about the user (their preferences, possessions,
+  plans, identity) — the companion user-fact extractor covers those.
+- Do not emit two facts that express the same claim at different
+  granularities; keep the most specific single version.
+- If the assistant contributed no substantive recommendation, computation,
+  or statement of fact, return {{"facts": []}}.
+"""
+
+
 def _write_facts_to_graph(
     bgraph: Any,
     parsed: _ExtractedFactList,
@@ -142,28 +197,37 @@ def _write_facts_to_graph(
     session_date: str,
     session_idx: int,
     turn_object_ids: list[str],
+    role: str,
 ) -> None:
     """Write Fact + mentions edges for one session's extraction result.
 
-    Shared by both the live @llm_behavior handler (on a cache miss,
+    Shared by both the live @llm_behavior handlers (on a cache miss,
     after the LLM call) and the in-memory session-extraction cache
     (on a cache hit, skipping the LLM call). Identical output by
     construction — both paths feed the same `parsed` shape into the
     same writes, so a cached hit produces byte-identical Fact ids and
     mentions edges to a live miss for the same session text.
 
+    ``role`` ("user" | "assistant") is the authorship of the facts in
+    ``parsed`` (which behavior produced them). It is stamped onto every
+    Fact's ``data["role"]`` AND mixed into the fact-id hash so a user
+    fact and an assistant fact that happen to share text in the same
+    session get distinct ids (they are distinct memories).
+
     Determinism for replay: fact ids are content-hashed
-    (``fact:<sha256(session_id|text)[:16]>``) so the same session text
-    re-extracted into the same Fact text yields the same fact_id —
-    regardless of whether the parsed value came from the live API or
-    the cache.
+    (``fact:<sha256(session_id|role|text)[:16]>``) so the same session
+    text re-extracted into the same (role, text) yields the same
+    fact_id — regardless of whether the parsed value came from the
+    live API or the cache.
     """
     n_turns = len(turn_object_ids)
     for fact in parsed.facts:
         text = (fact.text or "").strip()
         if not text:
             continue
-        h = hashlib.sha256(f"{session_id}|{text}".encode("utf-8")).hexdigest()[:16]
+        h = hashlib.sha256(
+            f"{session_id}|{role}|{text}".encode("utf-8")
+        ).hexdigest()[:16]
         fact_id = f"fact:{h}"
 
         fact_obj = bgraph.add_object(
@@ -174,6 +238,7 @@ def _write_facts_to_graph(
                 "session_id": session_id,
                 "session_date": session_date,
                 "session_idx": session_idx,
+                "role": role,
                 "source": "llm_extract",
             },
         )
@@ -210,11 +275,11 @@ def _sem_extract_handler(
     ctx: Any,
     parsed: _ExtractedFactList,
 ) -> None:
-    """Live-API path: invoked by the runtime on a cache miss after the
-    LLM has produced a parsed _ExtractedFactList. All Fact-writing is
-    delegated to :func:`_write_facts_to_graph` so the cache-hit path
-    (which skips the LLM but still must produce identical writes) calls
-    exactly the same code.
+    """Live-API path (USER facts): invoked by the runtime on a cache miss
+    after the LLM has produced a parsed _ExtractedFactList. All
+    Fact-writing is delegated to :func:`_write_facts_to_graph` so the
+    cache-hit path (which skips the LLM but still must produce identical
+    writes) calls exactly the same code.
     """
     payload = event.payload or {}
     _write_facts_to_graph(
@@ -224,6 +289,47 @@ def _sem_extract_handler(
         session_date=str(payload.get("session_date", "")),
         session_idx=int(payload.get("session_idx", 0)),
         turn_object_ids=list(payload.get("turn_object_ids", [])),
+        role="user",
+    )
+
+
+@ag.llm_behavior(
+    name=_EXTRACTOR_BEHAVIOR_NAME_ASSISTANT,
+    on=[_EXTRACT_REQUEST_TYPE],
+    output_schema=_ExtractedFactList,
+    # Same alias / temperature / schema as the user extractor — the only
+    # difference is the prompt template (assistant-centric) and the role
+    # stamped on the resulting facts. Registered AFTER the user behavior so
+    # the FIFO single-threaded reaction loop fires user-then-assistant
+    # deterministically for each extract_request.
+    temperature=0.0,
+    max_tokens=2048,
+    timeout_seconds=60.0,
+    description=(
+        "Extract atomic ASSISTANT-authored facts from a single haystack "
+        "session (what the assistant recommended / computed / told the "
+        "user). Emits one Fact object per claim with a stable content-hash "
+        "id and `mentions` relations to the supporting turns."
+    ),
+    prompt_template=_EXTRACT_PROMPT_TEMPLATE_ASSISTANT,
+)
+def _sem_extract_handler_assistant(
+    event: ag.Event,
+    bgraph: Any,
+    ctx: Any,
+    parsed: _ExtractedFactList,
+) -> None:
+    """Live-API path (ASSISTANT facts). Mirror of :func:`_sem_extract_handler`
+    but stamps ``role="assistant"`` on every written Fact."""
+    payload = event.payload or {}
+    _write_facts_to_graph(
+        bgraph,
+        parsed,
+        session_id=str(payload.get("session_id", "")),
+        session_date=str(payload.get("session_date", "")),
+        session_idx=int(payload.get("session_idx", 0)),
+        turn_object_ids=list(payload.get("turn_object_ids", [])),
+        role="assistant",
     )
 
 
@@ -237,6 +343,25 @@ def _compute_prompt_sha256(prompt_template: str) -> str:
     we expose in per-ingest meta — same input, different presentation.
     """
     return hashlib.sha256(prompt_template.encode("utf-8")).hexdigest()
+
+
+def _compute_combined_prompt_sha256() -> str:
+    """Canonical extractor signature over the FULL behavior set (both the
+    user and assistant prompt templates, in registration order).
+
+    This is the value stamped into a cache manifest and re-checked at load
+    time. Adding the assistant behavior changes this signature, so the
+    committed seed-A (built under the user-only signature) will be REFUSED
+    by the manifest guard under the new code — exactly the intended
+    invalidation. seed-A-v2 is built under, and pinned to, this combined
+    signature.
+    """
+    blob = (
+        _EXTRACT_PROMPT_TEMPLATE
+        + "\x00"
+        + _EXTRACT_PROMPT_TEMPLATE_ASSISTANT
+    )
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
 def _sha256_file(path: Path) -> str:
@@ -324,8 +449,8 @@ class _PersistentExtractionCache:
         self.manifest_path = self.cache_dir / f"seed-{seed}.manifest.json"
         self.checksums_path = self.cache_dir / "CHECKSUMS.sha256"
 
-        # In-memory hot dict — keys = (session_id, content_sha256).
-        self._entries: dict[tuple[str, str], _ExtractedFactList] = {}
+        # In-memory hot dict — keys = (session_id, content_sha256, role).
+        self._entries: dict[tuple[str, str, str], _ExtractedFactList] = {}
         # Resolved snapshot the API actually served, captured lazily
         # on the first miss within the lifetime of this cache (or
         # pulled from the manifest on load). All subsequent puts must
@@ -382,12 +507,13 @@ class _PersistentExtractionCache:
                             obj = json.loads(raw)
                             sid = str(obj["session_id"])
                             csum = str(obj["content_sha256"])
+                            role = str(obj.get("role", "user"))
                             parsed = _ExtractedFactList.model_validate(obj["parsed"])
                         except Exception as e:  # noqa: BLE001
                             raise CacheManifestMismatchError(
                                 f"corrupt entry at {self.cache_path}:{line_no}: {e!r}"
                             ) from e
-                        self._entries[(sid, csum)] = parsed
+                        self._entries[(sid, csum, role)] = parsed
             # Fresh or partial: manifest gets written on first flush.
             return
 
@@ -426,19 +552,20 @@ class _PersistentExtractionCache:
                     obj = json.loads(raw)
                     sid = str(obj["session_id"])
                     csum = str(obj["content_sha256"])
+                    role = str(obj.get("role", "user"))
                     parsed = _ExtractedFactList.model_validate(obj["parsed"])
                 except Exception as e:  # noqa: BLE001 — surface corruption
                     raise CacheManifestMismatchError(
                         f"corrupt entry at {self.cache_path}:{line_no}: {e!r}"
                     ) from e
-                self._entries[(sid, csum)] = parsed
+                self._entries[(sid, csum, role)] = parsed
 
     # ---- read ----
 
     def get(
-        self, session_id: str, content_sha256: str
+        self, session_id: str, content_sha256: str, role: str
     ) -> _ExtractedFactList | None:
-        return self._entries.get((session_id, content_sha256))
+        return self._entries.get((session_id, content_sha256, role))
 
     # ---- write ----
 
@@ -446,6 +573,7 @@ class _PersistentExtractionCache:
         self,
         session_id: str,
         content_sha256: str,
+        role: str,
         parsed: _ExtractedFactList,
         *,
         extractor_model_resolved: str | None,
@@ -453,6 +581,10 @@ class _PersistentExtractionCache:
         """Append a new entry (write-through) and update the
         in-memory hot dict. No-op if the key is already present
         (idempotent on re-extracts within a single process).
+
+        The key now includes ``role`` so the user-fact and assistant-fact
+        extraction results for the SAME session text are stored as two
+        distinct entries.
 
         Append uses ``fcntl.flock`` for cross-process safety so a
         parallel build (multiple worker processes appending to the
@@ -466,7 +598,7 @@ class _PersistentExtractionCache:
         """
         import fcntl
 
-        key = (session_id, content_sha256)
+        key = (session_id, content_sha256, role)
         if key in self._entries:
             return
         if extractor_model_resolved:
@@ -485,6 +617,7 @@ class _PersistentExtractionCache:
             {
                 "session_id": session_id,
                 "content_sha256": content_sha256,
+                "role": role,
                 "parsed": parsed.model_dump(),
             },
             sort_keys=True,
@@ -591,7 +724,7 @@ class ActiveGraphSemExtractSystem:
         max_doc_freq_fraction: float,
         extractor_model: str = "claude-sonnet-4-5",
         extraction_cache_enabled: bool | None = None,
-        extract_seed: str = "A",
+        extract_seed: str = "A-v2",
         extraction_cache_dir: str | Path | None = None,
     ) -> None:
         self.token_budget = token_budget
@@ -632,11 +765,11 @@ class ActiveGraphSemExtractSystem:
         )
 
         # Per-prompt content hash; doubles as the manifest's
-        # invalidation key. Truncated form (first 16 hex) goes into
-        # per-ingest meta as `extractor_signature` for visibility.
-        self._prompt_sha256: str = _compute_prompt_sha256(
-            _EXTRACT_PROMPT_TEMPLATE
-        )
+        # invalidation key. Now computed over BOTH extractor prompts
+        # (user + assistant) so adding the assistant behavior invalidates
+        # any cache built under the user-only signature. Truncated form
+        # (first 16 hex) goes into per-ingest meta as `extractor_signature`.
+        self._prompt_sha256: str = _compute_combined_prompt_sha256()
         self._extractor_signature: str = self._prompt_sha256[:16]
 
         self._cache: _PersistentExtractionCache | None = None
@@ -683,7 +816,7 @@ class ActiveGraphSemExtractSystem:
         # package's reaction loop is FIFO single-threaded and behaviors
         # fire in registration order. Record it so a reviewer can verify
         # replay would re-emit events identically.
-        behaviors = [_sem_extract_handler]
+        behaviors = [_sem_extract_handler, _sem_extract_handler_assistant]
         behaviors_registered = [
             {"name": b.name, "on": list(b.on), "model": b.model}
             for b in behaviors
@@ -709,14 +842,24 @@ class ActiveGraphSemExtractSystem:
         # helper the live handler uses, so the per-session graph
         # mutations are identical to a live miss for the same session.
         sessions_by_id = self._group_sessions(ingest_state, instance)
-        cache_hit_writes: list[tuple[dict, _ExtractedFactList]] = []
-        # Map of miss event_id -> (session_id, content_sha256) so we can
-        # harvest the parsed LLM result out of the post-run event log and
-        # store it under the right cache key.
+        cache_hit_writes: list[tuple[dict, _ExtractedFactList, str]] = []
+        # Map of miss event_id -> (session_id, content_sha256). Each miss
+        # emits ONE extract_request that BOTH behaviors (user + assistant)
+        # react to; harvesting derives the role from the responding
+        # behavior name (see _harvest_misses_into_cache).
         miss_event_id_to_key: dict[str, tuple[str, str]] = {}
         n_sessions_total = 0
         n_cache_hits = 0
         n_sessions_extracted = 0
+
+        def _lookup(
+            sid_: str, csum_: str, role_: str
+        ) -> _ExtractedFactList | None:
+            if self._cache is not None:
+                return self._cache.get(sid_, csum_, role_)
+            if self._extraction_cache_enabled is False:
+                return None
+            return self._memory_only_cache.get((sid_, csum_, role_))
 
         for sid, sdate, s_idx in zip(
             instance.haystack_session_ids,
@@ -733,17 +876,6 @@ class ActiveGraphSemExtractSystem:
                 session_text.encode("utf-8")
             ).hexdigest()
             cache_key = (sid, content_sha256)
-            cached: _ExtractedFactList | None = None
-            if self._cache is not None:
-                cached = self._cache.get(sid, content_sha256)
-            elif self._extraction_cache_enabled is False:
-                # Persistent cache explicitly disabled — no in-memory
-                # cache either; every session is a miss (variance test).
-                cached = None
-            else:
-                # Defensive: persistent cache not constructed but flag
-                # left enabled — fall back to in-memory hot dict.
-                cached = self._memory_only_cache.get(cache_key)
 
             payload = {
                 "session_id": sid,
@@ -754,19 +886,25 @@ class ActiveGraphSemExtractSystem:
                 "n_turns": len(turn_views),
             }
 
-            if cached is not None:
-                # CACHE HIT: skip the extract_request emit so the
-                # behavior never fires for this session. Defer the
-                # Fact-writing until after run_until_idle so the
-                # event log shows misses first (preserving the FIFO
-                # order of live extractions), then hits.
+            # BOTH roles must be cached for this session to skip the LLM.
+            cached_by_role = {
+                role: _lookup(sid, content_sha256, role)
+                for role in ("user", "assistant")
+            }
+            if all(v is not None for v in cached_by_role.values()):
+                # FULL CACHE HIT (both roles): skip the emit entirely so
+                # NEITHER behavior fires. Defer Fact-writing per role until
+                # after run_until_idle so the event log shows live misses
+                # first (preserving FIFO order), then hits.
                 n_cache_hits += 1
-                cache_hit_writes.append((payload, cached))
+                for role, cached in cached_by_role.items():
+                    cache_hit_writes.append((payload, cached, role))
             else:
-                # CACHE MISS: emit the event the @llm_behavior listens
-                # to. The runtime will assemble the prompt, call the
-                # provider, parse the structured output, and invoke
-                # _sem_extract_handler with the parsed result.
+                # MISS (one or both roles uncached): emit ONE event; both
+                # behaviors run and produce both roles' facts live. A
+                # partial-cache session re-extracts both roles — only
+                # possible during an incremental build, never during the
+                # all-hit replay the committed cache is built for.
                 n_sessions_extracted += 1
                 evt = ag.Event(
                     id=ingest_state.graph.ids.event(),
@@ -809,10 +947,10 @@ class ActiveGraphSemExtractSystem:
         # graph mutations are not. This preserves the package's
         # replay/inspectability contract: every Fact in the graph has
         # a real object.created event sitting in graph.events.
-        for payload, cached in cache_hit_writes:
+        for payload, cached, role in cache_hit_writes:
             hit_bgraph = BehaviorGraph(
                 ingest_state.graph,
-                actor=_EXTRACTOR_BEHAVIOR_NAME,
+                actor=_ROLE_BEHAVIOR.get(role, _EXTRACTOR_BEHAVIOR_NAME),
                 caused_by=None,
                 frame_id=None,
             )
@@ -823,6 +961,7 @@ class ActiveGraphSemExtractSystem:
                 session_date=str(payload["session_date"]),
                 session_idx=int(payload["session_idx"]),
                 turn_object_ids=list(payload["turn_object_ids"]),
+                role=role,
             )
 
         # Update cumulative counters on the system instance.
@@ -838,6 +977,14 @@ class ActiveGraphSemExtractSystem:
             self._cache.flush_manifest()
 
         n_facts = sum(1 for _ in ingest_state.graph.objects(type="Fact"))
+        n_facts_user = sum(
+            1 for o in ingest_state.graph.objects(type="Fact")
+            if (o.data or {}).get("role") == "user"
+        )
+        n_facts_assistant = sum(
+            1 for o in ingest_state.graph.objects(type="Fact")
+            if (o.data or {}).get("role") == "assistant"
+        )
         n_fact_events = sum(
             1 for e in ingest_state.graph.events if e.type == "object.created"
             and e.payload.get("object", {}).get("type") == "Fact"
@@ -850,6 +997,8 @@ class ActiveGraphSemExtractSystem:
         meta = {
             **ingest_state.stats(),
             "n_facts": n_facts,
+            "n_facts_user": n_facts_user,
+            "n_facts_assistant": n_facts_assistant,
             "n_fact_events": n_fact_events,
             "n_mentions_edges": n_mentions,
             "n_behavior_failed": n_behavior_failed,
@@ -900,14 +1049,19 @@ class ActiveGraphSemExtractSystem:
 
         Event chain (per the runtime's @llm_behavior invocation path):
           extract_request  ← caused_by ←  llm.requested  ← caused_by ←  llm.responded
-        We look up llm.responded events for our behavior, walk back via
-        ``caused_by`` two hops, and pull the parsed payload.
+        We look up llm.responded events for EITHER extractor behavior,
+        walk back via ``caused_by`` two hops, and pull the parsed payload.
+        The role is derived from which behavior responded so the user and
+        assistant results for one extract_request land under distinct
+        (session_id, content_sha256, role) keys.
         """
         events_by_id: dict[str, Any] = {e.id: e for e in graph.events}
         for ev in graph.events:
             if ev.type != "llm.responded":
                 continue
-            if ev.payload.get("behavior") != _EXTRACTOR_BEHAVIOR_NAME:
+            behavior_name = ev.payload.get("behavior")
+            role = _BEHAVIOR_ROLE.get(behavior_name)
+            if role is None:
                 continue
             req = events_by_id.get(ev.caused_by) if ev.caused_by else None
             if req is None or req.type != "llm.requested":
@@ -930,13 +1084,14 @@ class ActiveGraphSemExtractSystem:
                 self._cache.put(
                     sid,
                     csum,
+                    role,
                     parsed,
                     extractor_model_resolved=extractor_resolved,
                 )
             else:
                 # Persistent cache disabled; fall back to the in-process
                 # memory dict (variance/guard testing path).
-                self._memory_only_cache[cache_key] = parsed
+                self._memory_only_cache[(sid, csum, role)] = parsed
 
     # ---- retrieve -----------------------------------------------------------
 
@@ -1065,11 +1220,14 @@ def _resolve_extractor_snapshot(graph: ag.Graph) -> str | None:
     for ev in graph.events:
         if ev.type != "llm.responded":
             continue
-        # Filter to events caused by our extractor behavior. Both the
-        # actor and the behavior_name in the payload identify it.
-        if ev.actor != _EXTRACTOR_BEHAVIOR_NAME and ev.payload.get(
-            "behavior_name"
-        ) != _EXTRACTOR_BEHAVIOR_NAME:
+        # Filter to events caused by EITHER extractor behavior. Both the
+        # actor and the behavior/behavior_name in the payload identify it.
+        names = {
+            ev.actor,
+            ev.payload.get("behavior"),
+            ev.payload.get("behavior_name"),
+        }
+        if names.isdisjoint(_BEHAVIOR_ROLE.keys()):
             continue
         model = ev.payload.get("model")
         if model:

@@ -71,7 +71,7 @@ def fact_signature(state) -> list[dict]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--seed", choices=["A", "B", "C"], default="A")
+    ap.add_argument("--seed", choices=["A", "A-v2", "B", "C"], default="A-v2")
     args = ap.parse_args()
 
     cfg = load_config("config/run.yaml")

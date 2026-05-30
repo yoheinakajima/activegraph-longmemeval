@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 
 # Force the char/4 fallback so this script never needs network. The behavior
 # we test here doesn't depend on the tokenizer, only on whether truncation
@@ -404,6 +405,57 @@ def _sem_index_assembly(cfg) -> tuple[str, str]:
             f"selected_via_fact={selected_via_fact})")
 
 
+def _role_cache_roundtrip(cfg) -> tuple[str, str]:
+    """Role is part of the cache key: the SAME (session_id, content_sha256)
+    stores two distinct entries (user + assistant). Round-trips on disk."""
+    import tempfile
+    from activegraph_lme.systems.activegraph_sem_extract import (
+        _ExtractedFact, _ExtractedFactList, _PersistentExtractionCache,
+        _compute_combined_prompt_sha256,
+    )
+    with tempfile.TemporaryDirectory() as d:
+        kw = dict(cache_dir=Path(d), seed="A-v2",
+                  prompt_sha256=_compute_combined_prompt_sha256(),
+                  extractor_model_requested="claude-sonnet-4-5")
+        c = _PersistentExtractionCache(**kw)
+        u = _ExtractedFactList(facts=[_ExtractedFact(text="The user owns a kayak.")])
+        a = _ExtractedFactList(facts=[_ExtractedFact(text="The assistant recommended a 12ft kayak.")])
+        c.put("s1", "csum1", "user", u, extractor_model_resolved="m")
+        c.put("s1", "csum1", "assistant", a, extractor_model_resolved="m")
+        c.flush_manifest()
+        # Reload from disk and confirm both roles survive under one (sid,csum).
+        c2 = _PersistentExtractionCache(**kw)
+        got_u = c2.get("s1", "csum1", "user")
+        got_a = c2.get("s1", "csum1", "assistant")
+        two_entries = len(c2) == 2
+        roles_distinct = (got_u is not None and got_a is not None
+                          and got_u.facts[0].text != got_a.facts[0].text)
+    ok = two_entries and roles_distinct
+    return (PASS if ok else FAIL,
+            f"role cache round-trip (entries={len(c2)}, roles_distinct={roles_distinct})")
+
+
+def _seed_a_invalidation(cfg) -> tuple[str, str]:
+    """The committed user-only seed-A manifest must be REFUSED under the
+    role-aware (combined-prompt) signature — the intended invalidation."""
+    from activegraph_lme.systems.activegraph_sem_extract import (
+        _PersistentExtractionCache, CacheManifestMismatchError,
+        _compute_combined_prompt_sha256,
+    )
+    seed_dir = Path("data/sem_extract_cache")
+    if not (seed_dir / "seed-A.manifest.json").exists():
+        return (SKIP, "seed-A not present; invalidation guard not exercised")
+    try:
+        _PersistentExtractionCache(
+            cache_dir=seed_dir, seed="A",
+            prompt_sha256=_compute_combined_prompt_sha256(),
+            extractor_model_requested="claude-sonnet-4-5",
+        )
+    except CacheManifestMismatchError:
+        return (PASS, "seed-A correctly refused under role-aware signature")
+    return (FAIL, "seed-A loaded under new signature (should have been refused)")
+
+
 def main() -> int:
     cfg = load_config()
     inst = _make_instance()
@@ -440,6 +492,10 @@ def main() -> int:
     results.append(_sem_hybrid_assembly(cfg))
     results.append(_sem_hybrid_budget(cfg))
     results.append(_sem_index_assembly(cfg))
+
+    # Role-aware extraction (offline).
+    results.append(_role_cache_roundtrip(cfg))
+    results.append(_seed_a_invalidation(cfg))
 
     n_fail = 0
     for status, msg in results:

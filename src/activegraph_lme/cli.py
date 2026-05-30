@@ -88,13 +88,15 @@ def main() -> None:
 )
 @click.option(
     "--extract-seed",
-    type=click.Choice(["A", "B", "C"]),
-    default="A",
+    type=click.Choice(["A", "A-v2", "B", "C"]),
+    default="A-v2",
     show_default=True,
     help=(
-        "Frozen extraction-cache seed for activegraph-sem-extract. seed-A is "
-        "the committed canonical cache; seed-B/C are gitignored variance "
-        "samples. Other systems ignore this flag."
+        "Frozen extraction-cache seed for the sem-extract family. seed-A is "
+        "the original user-only cache (INVALIDATED under the role-aware "
+        "extractor — its manifest guard will refuse to load). seed-A-v2 is "
+        "the canonical role-aware cache (user + assistant facts); seed-B/C "
+        "are gitignored variance samples. Other systems ignore this flag."
     ),
 )
 def run_cmd(
