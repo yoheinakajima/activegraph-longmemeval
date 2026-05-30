@@ -789,9 +789,10 @@ class ActiveGraphSemExtractSystem:
         # In-memory fallback when persistent cache is disabled
         # (variance/guard testing). Mirrors the persistent cache's
         # in-memory hot dict so the rest of ingest() doesn't need to
-        # branch on which kind of cache is active.
+        # branch on which kind of cache is active. Keyed by
+        # (session_id, content_sha256, role) like the persistent cache.
         self._memory_only_cache: dict[
-            tuple[str, str], _ExtractedFactList
+            tuple[str, str, str], _ExtractedFactList
         ] = {}
 
         # Cumulative counters across all ingests on this instance
