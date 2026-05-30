@@ -22,11 +22,23 @@ Usage:
     python scripts/build_extract_cache.py --seed A-v2 --dataset s --smoke
     python scripts/build_extract_cache.py --seed A-v2 --dataset s --smoke --workers 8
 
-Parallelism
-    --workers N runs the (independent, LLM-bound) per-session extractions
-    across N processes; the parent serially writes the returned results
-    into the JSONL + manifest. No cross-process file locking needed
-    because only the parent writes.
+Parallelism / write model
+    Each (session, role) extraction is an independent unit of work. The
+    parent persists each returned result to the JSONL **immediately**, as
+    soon as it completes — writes are never gated on the partner role (or
+    any other session) finishing. A user-fact extraction that succeeds
+    while the assistant-fact extraction for the same session is stuck in a
+    retry loop still lands on disk right away.
+
+    --serial (or --workers <= 1) runs a plain Python `for` loop over
+    (session, role) pairs: no ProcessPoolExecutor, no concurrent.futures,
+    nothing between the extraction and the write but a function return.
+    This is the recommended, deterministic path and isolates the write
+    path from any executor quirks.
+
+    --workers N (N > 1, and not --serial) fans the per-(session, role)
+    units across N processes; the parent still does every write, one entry
+    at a time, as futures complete.
 """
 
 from __future__ import annotations
@@ -73,15 +85,28 @@ def _filter_smoke(instances, smoke_ids_path: Path):
     return [i for i in instances if i.question_id in ids]
 
 
-def _extract_one_session(
-    args: tuple[str, str, int, list[dict]],
-) -> tuple[str, str, dict, str | None]:
-    """Worker: extract BOTH roles' facts for ONE session.
+_ROLE_BEHAVIORS = {
+    "user": _sem_extract_handler,
+    "assistant": _sem_extract_handler_assistant,
+}
 
-    Returns (sid, csum, {role: parsed_dump_or_None}, resolved_model).
-    Builds a throwaway single-session graph + runtime so each worker is
-    fully independent (no shared graph mutation across processes). Both
-    extractor behaviors react to the single emitted extract_request.
+
+def _extract_role_for_session(
+    args: tuple[str, str, int, list[dict]],
+    role: str,
+) -> tuple[str, str, dict | None, str | None]:
+    """Worker: extract ONE role's facts for ONE session.
+
+    Returns (sid, csum, parsed_dump_or_None, resolved_model). ``None`` for
+    the parsed dump means the extraction failed or the LLM output did not
+    parse (a parse-error); the caller persists an empty stub in that case
+    so the entry still lands on disk and never blocks the partner role.
+
+    Builds a throwaway single-session graph + runtime with ONLY this
+    role's behavior registered, so the two roles of a session are fully
+    independent units of work: a wedged assistant extraction can never
+    stall the user write (or vice versa), and each unit can be persisted
+    the instant it returns.
     """
     sid, sdate, s_idx, session_turns = args
 
@@ -98,7 +123,7 @@ def _extract_one_session(
 
     runtime = ag.Runtime(
         graph,
-        behaviors=[_sem_extract_handler, _sem_extract_handler_assistant],
+        behaviors=[_ROLE_BEHAVIORS[role]],
         llm_provider=_build_llm_provider("claude-sonnet-4-5"),
         seed=0,
     )
@@ -121,23 +146,22 @@ def _extract_one_session(
     try:
         runtime.run_until_idle()
     except Exception as e:  # noqa: BLE001
-        print(f"  [warn] extraction failed for {sid}: {e!r}", file=sys.stderr)
-        return sid, csum, {"user": None, "assistant": None}, None
+        print(f"  [warn] {role} extraction failed for {sid}: {e!r}", file=sys.stderr)
+        return sid, csum, None, None
 
-    results: dict[str, dict | None] = {"user": None, "assistant": None}
+    parsed_dump: dict | None = None
     resolved: str | None = None
     for ev in graph.events:
         if ev.type != "llm.responded":
             continue
-        role = _BEHAVIOR_ROLE.get(ev.payload.get("behavior"))
-        if role is None:
+        if _BEHAVIOR_ROLE.get(ev.payload.get("behavior")) != role:
             continue
         p = ev.payload.get("parsed")
         if p is not None:
-            results[role] = p
+            parsed_dump = p
         if ev.payload.get("model"):
             resolved = str(ev.payload["model"])
-    return sid, csum, results, resolved
+    return sid, csum, parsed_dump, resolved
 
 
 def _iter_sessions(instances: list[LMEInstance]):
@@ -164,18 +188,51 @@ def _csum_for_session(sid, sdate, sess) -> str:
     return _content_sha256(_session_text(state.turns))
 
 
-def _persist(cache: _PersistentExtractionCache, sid, csum, results, resolved) -> int:
-    n = 0
-    for role, dump in results.items():
-        if dump is None:
+def _persist_role(
+    cache: _PersistentExtractionCache, sid, csum, role, parsed_dump, resolved
+) -> int:
+    """Write ONE (session, role) result through to disk immediately.
+
+    On a parse-error / failed extraction (``parsed_dump is None``) we still
+    persist an empty fact-list stub: the entry lands on disk, ``--resume``
+    won't re-attempt it, and — critically — it never leaves a hole that a
+    stuck partner role could block behind. ``cache.put`` is the
+    write-through append (flush + fsync per entry) and is idempotent, so a
+    re-run is a no-op for already-present keys.
+
+    Returns the number of entries actually appended to the JSONL (0 if the
+    key was already present), measured from the cache's append counter.
+    """
+    parsed = (
+        _ExtractedFactList(facts=[])
+        if parsed_dump is None
+        else _ExtractedFactList.model_validate(parsed_dump)
+    )
+    before = cache._n_appended_this_process
+    cache.put(sid, csum, role, parsed, extractor_model_resolved=resolved)
+    return cache._n_appended_this_process - before
+
+
+def _clear_stale_locks(cache_dir: Path) -> None:
+    """Remove leftover lock / partial / scratch artifacts from a prior
+    killed build so they can't wedge or mislead a fresh run.
+
+    The cache append uses an in-fd ``fcntl.flock`` (no on-disk lock file),
+    but a previously-aborted run or external tooling may have left
+    ``*.lock`` / ``*.partial`` sidecars or a ``.scratch_build/`` dir behind.
+    We don't assume they're absent — sweep them defensively.
+    """
+    patterns = ["*.lock", "*.partial"]
+    for d in (cache_dir, cache_dir / ".scratch_build", Path(".scratch_build")):
+        if not d.exists():
             continue
-        cache.put(
-            sid, csum, role,
-            _ExtractedFactList.model_validate(dump),
-            extractor_model_resolved=resolved,
-        )
-        n += 1
-    return n
+        for pat in patterns:
+            for p in d.glob(pat):
+                try:
+                    p.unlink()
+                    print(f"[build] cleared stale lock artifact: {p}")
+                except OSError as e:  # noqa: BLE001
+                    print(f"  [warn] could not remove {p}: {e!r}", file=sys.stderr)
 
 
 def main() -> int:
@@ -185,6 +242,12 @@ def main() -> int:
     ap.add_argument("--dataset", default="s")
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--workers", type=int, default=1)
+    ap.add_argument(
+        "--serial",
+        action="store_true",
+        help="Force the pure for-loop path (no ProcessPoolExecutor) "
+             "regardless of --workers. Implied by --workers <= 1.",
+    )
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--smoke-ids", default="config/smoke_ids.txt")
     ap.add_argument("--config", default="config/run.yaml")
@@ -195,41 +258,80 @@ def main() -> int:
     if args.smoke:
         instances = _filter_smoke(instances, Path(args.smoke_ids))
 
+    cache_dir = Path("data/sem_extract_cache")
+    _clear_stale_locks(cache_dir)
+
     cache = _PersistentExtractionCache(
-        cache_dir=Path("data/sem_extract_cache"),
+        cache_dir=cache_dir,
         seed=args.seed,
         prompt_sha256=_compute_combined_prompt_sha256(),
         extractor_model_requested="claude-sonnet-4-5",
     )
 
     sessions = list(_iter_sessions(instances))
+
+    # Unit of work = (session, role). Each is extracted and persisted
+    # independently so neither role blocks the other.
+    units: list[tuple[tuple[str, str, int, list[dict]], str]] = [
+        (s, role) for s in sessions for role in ("user", "assistant")
+    ]
     if args.resume:
-        # A session is done only when BOTH roles are already cached.
-        def _done(s) -> bool:
+        # Resume is per-role now: skip only the (session, role) pairs that
+        # are already on disk, so a session with just its user fact cached
+        # still gets its assistant fact attempted.
+        def _cached(unit) -> bool:
+            s, role = unit
             csum = _csum_for_session(s[0], s[1], s[3])
-            return (cache.get(s[0], csum, "user") is not None
-                    and cache.get(s[0], csum, "assistant") is not None)
-        sessions = [s for s in sessions if not _done(s)]
+            return cache.get(s[0], csum, role) is not None
+        units = [u for u in units if not _cached(u)]
 
-    print(f"[build] {len(sessions)} sessions to extract (seed={args.seed}, "
-          f"workers={args.workers}, 2 roles each)")
+    serial = args.serial or args.workers <= 1
+    print(f"[build] {len(sessions)} sessions / {len(units)} (session,role) units "
+          f"to extract (seed={args.seed}, "
+          f"mode={'serial' if serial else f'parallel x{args.workers}'})")
 
-    n_written = 0
-    if args.workers <= 1:
-        for s in sessions:
-            sid, csum, results, resolved = _extract_one_session(s)
-            n_written += _persist(cache, sid, csum, results, resolved)
-    else:
-        with ProcessPoolExecutor(max_workers=args.workers) as ex:
-            futs = {ex.submit(_extract_one_session, s): s for s in sessions}
-            for fut in as_completed(futs):
-                sid, csum, results, resolved = fut.result()
-                n_written += _persist(cache, sid, csum, results, resolved)
+    n_written = _run_units(cache, units, serial=serial, workers=args.workers)
 
     cache.flush_manifest()
     print(f"[build] wrote {n_written} new entries to {cache.cache_path}")
     print(f"[build] manifest: {cache.manifest_path}")
     return 0
+
+
+def _run_units(
+    cache: _PersistentExtractionCache,
+    units,
+    *,
+    serial: bool,
+    workers: int,
+    extract_fn=_extract_role_for_session,
+) -> int:
+    """Extract + persist each (session, role) unit, returning the count of
+    new JSONL entries appended.
+
+    Every result is persisted the moment it is produced — there is no
+    batching and no partner-role gate — so a wedged unit can never hold
+    back a completed one. ``extract_fn`` is injectable so offline tests can
+    drive the exact same loop with a mocked extractor (no API spend).
+    """
+    n_written = 0
+    if serial:
+        # Pure for-loop: nothing between extraction and the write-through
+        # append but a function return. No ProcessPoolExecutor.
+        for s, role in units:
+            sid, csum, parsed_dump, resolved = extract_fn(s, role)
+            n_written += _persist_role(cache, sid, csum, role, parsed_dump, resolved)
+    else:
+        with ProcessPoolExecutor(max_workers=workers) as ex:
+            futs = {
+                ex.submit(extract_fn, s, role): role
+                for (s, role) in units
+            }
+            for fut in as_completed(futs):
+                role = futs[fut]
+                sid, csum, parsed_dump, resolved = fut.result()
+                n_written += _persist_role(cache, sid, csum, role, parsed_dump, resolved)
+    return n_written
 
 
 if __name__ == "__main__":

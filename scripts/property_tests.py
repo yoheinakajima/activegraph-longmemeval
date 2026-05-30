@@ -435,6 +435,51 @@ def _role_cache_roundtrip(cfg) -> tuple[str, str]:
             f"role cache round-trip (entries={len(c2)}, roles_distinct={roles_distinct})")
 
 
+def _build_write_path_immediate(cfg) -> tuple[str, str]:
+    """build_extract_cache persists each (session, role) unit immediately
+    and per-entry: a parse-error on one unit must NOT block any other unit
+    from reaching disk (no partner-role gate, no holes). Drives the REAL
+    serial loop with a mocked extractor — offline, no API."""
+    import sys as _sys
+    import tempfile
+    from pathlib import Path as _Path
+
+    _sys.path.insert(0, str(_Path("scripts").resolve()))
+    import build_extract_cache as bm  # noqa: E402
+    from activegraph_lme.systems.activegraph_sem_extract import (
+        _PersistentExtractionCache, _compute_combined_prompt_sha256,
+    )
+
+    sessions = [
+        (f"sess-{i:02d}", "2025-01-01", i, [{"role": "user", "content": "hi"}])
+        for i in range(10)
+    ]
+    units = [(s, role) for s in sessions for role in ("user", "assistant")]
+
+    def _mock(s, role):
+        sid = s[0]
+        if sid == "sess-03" and role == "assistant":
+            return sid, f"csum-{sid}", None, None  # parse-error -> stub
+        return (sid, f"csum-{sid}",
+                {"facts": [{"text": f"{role} fact {sid}",
+                            "mentioned_turn_idxs": [0]}]},
+                "m")
+
+    with tempfile.TemporaryDirectory() as d:
+        cache = _PersistentExtractionCache(
+            cache_dir=_Path(d), seed="A-v2",
+            prompt_sha256=_compute_combined_prompt_sha256(),
+            extractor_model_requested="claude-sonnet-4-5",
+        )
+        n = bm._run_units(cache, units, serial=True, workers=1, extract_fn=_mock)
+        on_disk = [
+            ln for ln in cache.cache_path.read_text().splitlines() if ln.strip()
+        ]
+    ok = n == 20 and len(on_disk) == 20
+    return (PASS if ok else FAIL,
+            f"build write path immediate + ungated (appended={n}, on_disk={len(on_disk)})")
+
+
 def _seed_a_invalidation(cfg) -> tuple[str, str]:
     """The committed user-only seed-A manifest must be REFUSED under the
     role-aware (combined-prompt) signature — the intended invalidation."""
@@ -495,6 +540,7 @@ def main() -> int:
 
     # Role-aware extraction (offline).
     results.append(_role_cache_roundtrip(cfg))
+    results.append(_build_write_path_immediate(cfg))
     results.append(_seed_a_invalidation(cfg))
 
     n_fail = 0

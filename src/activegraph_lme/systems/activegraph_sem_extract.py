@@ -627,6 +627,14 @@ class _PersistentExtractionCache:
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             try:
                 f.write(line + "\n")
+                # Write-through to disk PER ENTRY: a plain `with`-close only
+                # flushes the Python buffer to the kernel on scope exit, and
+                # a long-running / wedged build may never reach scope exit.
+                # flush() pushes the userspace buffer to the OS and fsync()
+                # forces it to stable storage, so a concurrently-tailing
+                # reader (or a kill -9) always sees every completed entry.
+                f.flush()
+                os.fsync(f.fileno())
             finally:
                 fcntl.flock(f.fileno(), fcntl.LOCK_UN)
         self._n_appended_this_process += 1
