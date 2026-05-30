@@ -1,5 +1,9 @@
 from .activegraph_det import ActiveGraphDetSystem
 from .activegraph_sem_extract import ActiveGraphSemExtractSystem
+from .activegraph_sem_variants import (
+    ActiveGraphSemHybridSystem,
+    ActiveGraphSemIndexSystem,
+)
 from .base import AssembledContext, System
 from .full_context_oracle import FullContextOracle
 from .full_context_s import FullContextS
@@ -44,6 +48,26 @@ def build_system(name: str, cfg, *, extract_seed: str = "A") -> System:
             extractor_model=cfg.reader.model,
             extract_seed=extract_seed,
         )
+    if name == "activegraph-sem-hybrid":
+        return ActiveGraphSemHybridSystem(
+            token_budget=cfg.activegraph.token_budget,
+            min_token_length=cfg.activegraph.min_token_length,
+            min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+            max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+            extractor_model=cfg.reader.model,
+            extract_seed=extract_seed,
+            embedding_model=cfg.embeddings.model,
+        )
+    if name == "activegraph-sem-index":
+        return ActiveGraphSemIndexSystem(
+            token_budget=cfg.activegraph.token_budget,
+            min_token_length=cfg.activegraph.min_token_length,
+            min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+            max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+            extractor_model=cfg.reader.model,
+            extract_seed=extract_seed,
+            embedding_model=cfg.embeddings.model,
+        )
     raise ValueError(f"Unknown system: {name}")
 
 
@@ -56,5 +80,7 @@ __all__ = [
     "RagDense",
     "ActiveGraphDetSystem",
     "ActiveGraphSemExtractSystem",
+    "ActiveGraphSemHybridSystem",
+    "ActiveGraphSemIndexSystem",
     "build_system",
 ]

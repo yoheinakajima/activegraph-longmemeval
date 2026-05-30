@@ -29,6 +29,12 @@ class QueryRecord:
     completion_tokens: int    # authoritative count from reader API
     truncated: bool = False   # True iff context was truncated to fit a budget
     elapsed_s: float = 0.0
+    # Optional per-question assembly meta surfaced by the system's
+    # retrieve() (AssembledContext.meta). Additive: systems that return no
+    # meta record None, leaving legacy manifests byte-compatible. The
+    # sem-* variants record n_facts_selected / n_turns_anchored /
+    # n_unique_turns_rendered + the inherited extraction-cache stats here.
+    meta: dict[str, Any] | None = None
 
 
 @dataclass

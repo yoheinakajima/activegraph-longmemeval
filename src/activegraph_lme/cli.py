@@ -215,6 +215,7 @@ def run_cmd(
                     completion_tokens=out.completion_tokens,
                     truncated=ctx.truncated,
                     elapsed_s=round(time.monotonic() - t_inst, 4),
+                    meta=ctx.meta,
                 )
             )
             if ctx.truncated:

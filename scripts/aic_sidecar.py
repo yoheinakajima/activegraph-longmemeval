@@ -258,6 +258,29 @@ def main() -> int:
                 selected_turn_ids, selected_fact_ids = _partition_unit_ids(selected_unit_ids)
                 selected_session_ids = sorted({tid.rsplit("#", 1)[0] for tid in selected_turn_ids})
 
+            elif system_name in ("activegraph-sem-hybrid", "activegraph-sem-index"):
+                # Both variants assemble a custom context (facts+anchored
+                # turns, or facts-as-index turns-only). Their retrieve()
+                # surfaces the turns that actually reached the reader in
+                # ctx.meta["selected_turn_ids"] and the driving facts in
+                # ["selected_fact_ids"]. We trust those (the reader saw
+                # exactly that text) and add the same repeat-call
+                # determinism guard the sem-extract branch uses; ingest is
+                # LLM/cache-driven so there's no idx==0 selection check.
+                ctx = system.retrieve(state, inst.question, inst.question_date)
+                ctx2 = system.retrieve(state, inst.question, inst.question_date)
+                if ctx2.text != ctx.text:
+                    raise SystemExit(
+                        f"Non-deterministic {system_name} retrieve on "
+                        f"{inst.question_id}; refusing to record."
+                    )
+                meta = ctx.meta or {}
+                selected_turn_ids = list(meta.get("selected_turn_ids") or [])
+                selected_fact_ids = list(meta.get("selected_fact_ids") or [])
+                selected_session_ids = sorted(
+                    {tid.rsplit("#", 1)[0] for tid in selected_turn_ids}
+                )
+
             elif system_name in ("rag-bm25", "rag-dense"):
                 if system_name == "rag-dense":
                     sel_pairs, sel_text = _rag_dense_select(system, state, inst.question, inst)
