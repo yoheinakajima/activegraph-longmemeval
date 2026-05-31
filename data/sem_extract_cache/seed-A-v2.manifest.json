@@ -1,11 +1,11 @@
 {
   "cache_file": "seed-A-v2.jsonl",
-  "cache_file_sha256": "4e4028e5484539be36106cbbc80375f18cc978e1be225b8f567f839dcb135bb9",
+  "cache_file_sha256": "38d56e94538ef0c7f7e236033d8d24ca5cddb889fa9556eef3f5db532ed9b95b",
   "created_at": "2026-05-30T23:34:57.194686+00:00",
   "extractor_model_requested": "claude-sonnet-4-5",
   "extractor_model_resolved": "claude-sonnet-4-5-20250929",
-  "n_entries": 4692,
+  "n_entries": 38391,
   "prompt_sha256": "603cd99e657a5412fb9b5ab24b7ca1eb81a9645daed0590fbaed8f8058cecff6",
   "seed": "A-v2",
-  "updated_at": "2026-05-30T23:41:18.194813+00:00"
+  "updated_at": "2026-05-31T19:54:37.394718+00:00"
 }
