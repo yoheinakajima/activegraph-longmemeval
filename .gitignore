@@ -12,15 +12,34 @@ __pycache__/
 !/data/CHECKSUMS.sha256
 !/data/.gitkeep
 
+# Frozen extraction cache. seed-A is the committed canonical artifact
+# (gates the byte-deterministic substrate for sem-extract); seed-B/C are
+# gitignored variance samples that get regenerated cheaply on demand.
+!/data/sem_extract_cache/
+/data/sem_extract_cache/seed-B.jsonl
+/data/sem_extract_cache/seed-B.manifest.json
+/data/sem_extract_cache/seed-C.jsonl
+/data/sem_extract_cache/seed-C.manifest.json
+
 # Runs are committed for the paper; keep tmp ones out.
 /runs/_tmp/
+
+# Local scratch dir used by build/verify scripts for worker logs etc.
+/.scratch_build/
 
 # tiktoken's BPE cache, populated on first network-enabled run.
 /.tiktoken_cache/
 
-# ignore data dirs at any depth, not just root
+# ignore data dirs at any depth, not just root. The top-level
+# /data/ is unignored explicitly so individually-whitelisted files
+# under it (CHECKSUMS, the sem_extract_cache committed seed-A) can
+# be tracked. Nested ./*/data/ trees stay ignored.
 **/data/
+!/data/
 # tiktoken cache at any depth
 **/.tiktoken_cache/
 # stray nested clone, should never be committed
 /activegraph-longmemeval/
+
+# another stray nested repo
+/regimes/

@@ -1,0 +1,32 @@
+{
+  "per_type": {
+    "single-session-user": {
+      "accuracy": NaN,
+      "n": 0
+    },
+    "single-session-preference": {
+      "accuracy": NaN,
+      "n": 0
+    },
+    "single-session-assistant": {
+      "accuracy": NaN,
+      "n": 0
+    },
+    "multi-session": {
+      "accuracy": NaN,
+      "n": 0
+    },
+    "temporal-reasoning": {
+      "accuracy": NaN,
+      "n": 0
+    },
+    "knowledge-update": {
+      "accuracy": NaN,
+      "n": 0
+    }
+  },
+  "task_averaged_accuracy": NaN,
+  "overall_accuracy": NaN,
+  "abstention_accuracy": NaN,
+  "abstention_n": 0
+}

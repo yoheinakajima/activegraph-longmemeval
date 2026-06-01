@@ -34,6 +34,10 @@ from activegraph_lme.config import RunCfg
 from activegraph_lme.data import LMEInstance, load_dataset, sha256_of_file
 from activegraph_lme.systems import build_system
 from activegraph_lme.systems.activegraph_det import ActiveGraphDetSystem
+from activegraph_lme.systems.activegraph_sem_extract import (
+    ActiveGraphSemExtractSystem,
+    _score_units_lexical,
+)
 from activegraph_lme.systems.rag_bm25 import RagBM25
 from activegraph_lme.systems.rag_dense import RagDense
 from activegraph_lme.activegraph.retrieve import (
@@ -41,6 +45,19 @@ from activegraph_lme.activegraph.retrieve import (
     score_embedding,
     score_lexical,
 )
+
+
+def _partition_unit_ids(unit_ids: list[str]) -> tuple[list[str], list[str]]:
+    """Split a selected_unit_ids list into (turn_ids, fact_ids).
+
+    Turn ids carry the ``{session_id}#{turn_idx}`` shape; fact ids use
+    the ``fact:<sha256-prefix>`` shape and contain no ``#``. Anything
+    else is treated as a turn id (preserves pre-Stage-1 behavior for
+    legacy callers).
+    """
+    turn_ids = [uid for uid in unit_ids if "#" in uid and not uid.startswith("fact:")]
+    fact_ids = [uid for uid in unit_ids if uid.startswith("fact:")]
+    return turn_ids, fact_ids
 
 
 def _ag_select(system: ActiveGraphDetSystem, state, question: str) -> tuple[list[str], str]:
@@ -54,7 +71,24 @@ def _ag_select(system: ActiveGraphDetSystem, state, question: str) -> tuple[list
             state.state, question, embedder, turn_embeddings=state.turn_embeddings
         )
     res = assemble(state.state, scores, token_budget=system.token_budget)
-    return res.selected_turn_ids, res.text
+    return res.selected_unit_ids, res.text
+
+
+def _ag_sem_select(
+    system: ActiveGraphSemExtractSystem, state, question: str
+) -> tuple[list[str], str]:
+    """Mirror of _ag_select for the sem-extract system.
+
+    Reuses the system's own _score_units_lexical so facts and turns are
+    scored on the same yardstick the live retrieve() uses; the byte-
+    identical reconstruction assertion in main() then catches any drift
+    between this path and ActiveGraphSemExtractSystem.retrieve().
+    """
+    scores = _score_units_lexical(
+        state.state, question, min_token_length=system.min_token_length
+    )
+    res = assemble(state.state, scores, token_budget=system.token_budget)
+    return res.selected_unit_ids, res.text
 
 
 def _rag_dense_select(
@@ -181,11 +215,12 @@ def main() -> int:
         ):
             state = system.ingest(inst)
 
+            selected_fact_ids: list[str] = []
             if system_name.startswith("activegraph-det-"):
-                selected_turn_ids, sel_text = _ag_select(system, state, inst.question)
+                selected_unit_ids, sel_text = _ag_select(system, state, inst.question)
                 if idx == 0:
                     _ids2, _text2 = _ag_select(system, state, inst.question)
-                    if _ids2 != selected_turn_ids:
+                    if _ids2 != selected_unit_ids:
                         raise SystemExit(
                             f"Non-deterministic ActiveGraph selection on "
                             f"{inst.question_id}: refusing to record."
@@ -196,7 +231,52 @@ def main() -> int:
                         f"Sidecar reconstruction != system.retrieve for "
                         f"{inst.question_id}; harness drift, refusing to record."
                     )
+                selected_turn_ids, selected_fact_ids = _partition_unit_ids(selected_unit_ids)
+                # Derive session ids from TURN ids only — fact ids
+                # (fact:<hash>, no `#`) would otherwise mis-split and
+                # pollute the per-question session set.
                 selected_session_ids = sorted({tid.rsplit("#", 1)[0] for tid in selected_turn_ids})
+
+            elif system_name == "activegraph-sem-extract":
+                selected_unit_ids, sel_text = _ag_sem_select(system, state, inst.question)
+                # No idx==0 determinism check: ingest is LLM-driven so
+                # selection across two ingest() calls would differ. The
+                # repeat-call check on retrieve() (below) still holds
+                # because retrieve over a frozen state is deterministic.
+                ctx = system.retrieve(state, inst.question, inst.question_date)
+                if ctx.text != sel_text:
+                    raise SystemExit(
+                        f"Sidecar reconstruction != system.retrieve for "
+                        f"{inst.question_id}; harness drift, refusing to record."
+                    )
+                ctx2 = system.retrieve(state, inst.question, inst.question_date)
+                if ctx2.text != ctx.text:
+                    raise SystemExit(
+                        f"Non-deterministic sem-extract retrieve on "
+                        f"{inst.question_id}; refusing to record."
+                    )
+                selected_turn_ids, selected_fact_ids = _partition_unit_ids(selected_unit_ids)
+                selected_session_ids = sorted({tid.rsplit("#", 1)[0] for tid in selected_turn_ids})
+
+            elif system_name in ("activegraph-sem-hybrid", "activegraph-sem-index"):
+                # Both compiled-memory variants expose their selected turn /
+                # fact ids directly on retrieve().meta, so we read those
+                # rather than re-deriving selection. Assembly is pure given
+                # the (content-addressed, cached) embedding scores, so a
+                # repeat retrieve() is byte-identical — assert it.
+                ctx = system.retrieve(state, inst.question, inst.question_date)
+                ctx2 = system.retrieve(state, inst.question, inst.question_date)
+                if ctx2.text != ctx.text:
+                    raise SystemExit(
+                        f"Non-deterministic {system_name} retrieve on "
+                        f"{inst.question_id}; refusing to record."
+                    )
+                meta = ctx.meta or {}
+                selected_turn_ids = list(meta.get("selected_turn_ids", []))
+                selected_fact_ids = list(meta.get("selected_fact_ids", []))
+                selected_session_ids = sorted(
+                    {tid.rsplit("#", 1)[0] for tid in selected_turn_ids}
+                )
 
             elif system_name in ("rag-bm25", "rag-dense"):
                 if system_name == "rag-dense":
@@ -235,20 +315,21 @@ def main() -> int:
             else:
                 raise SystemExit(f"Unknown system: {system_name}")
 
-            f.write(
-                json.dumps(
-                    {
-                        "question_id": inst.question_id,
-                        "question_type": inst.question_type,
-                        "system": system_name,
-                        "granularity": granularity,
-                        "selected_turn_ids": selected_turn_ids,
-                        "selected_session_ids": selected_session_ids,
-                    },
-                    ensure_ascii=False,
-                )
-                + "\n"
-            )
+            record = {
+                "question_id": inst.question_id,
+                "question_type": inst.question_type,
+                "system": system_name,
+                "granularity": granularity,
+                "selected_turn_ids": selected_turn_ids,
+                "selected_session_ids": selected_session_ids,
+            }
+            # Additive field: emitted only when the system actually
+            # selected fact units. This keeps pre-Stage-1 sidecar output
+            # (det-*, rag-*, full-context) byte-identical to the pre-patch
+            # baseline; only sem-extract records grow the new field.
+            if selected_fact_ids:
+                record["selected_fact_ids"] = selected_fact_ids
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
             f.flush()
 
     print(f"[sidecar] wrote {out_path} ({len(ordered)} questions, "

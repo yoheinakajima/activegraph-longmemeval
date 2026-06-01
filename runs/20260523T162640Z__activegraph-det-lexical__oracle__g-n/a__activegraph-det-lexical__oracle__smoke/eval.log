@@ -1,0 +1,31 @@
+0it [00:00, ?it/s]0it [00:00, ?it/s]
+/Users/yoheinakajima/aglongmem/ag-run/.venv/lib/python3.11/site-packages/numpy/core/fromnumeric.py:3504: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+/Users/yoheinakajima/aglongmem/ag-run/.venv/lib/python3.11/site-packages/numpy/core/_methods.py:129: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+Accuracy: nan
+	knowledge-update: nan (0)
+	multi-session: nan (0)
+	single-session-user: nan (0)
+	temporal-reasoning: nan (0)
+	single-session-assistant: nan (0)
+	single-session-preference: nan (0)
+Saved to runs/20260523T162640Z__activegraph-det-lexical__oracle__g-n/a__activegraph-det-lexical__oracle__smoke/hypotheses.jsonl.eval-results-gpt-4o
+
+=== print_qa_metrics.py ===
+/Users/yoheinakajima/aglongmem/ag-run/.venv/lib/python3.11/site-packages/numpy/core/fromnumeric.py:3504: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+/Users/yoheinakajima/aglongmem/ag-run/.venv/lib/python3.11/site-packages/numpy/core/_methods.py:129: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+
+Evaluation results by task:
+	single-session-user: nan (0)
+	single-session-preference: nan (0)
+	single-session-assistant: nan (0)
+	multi-session: nan (0)
+	temporal-reasoning: nan (0)
+	knowledge-update: nan (0)
+
+Task-averaged Accuracy: nan
+Overall Accuracy: nan
+Abstention Accuracy: nan (0)

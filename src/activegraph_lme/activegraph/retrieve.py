@@ -23,14 +23,42 @@ from __future__ import annotations
 import math
 import os
 import re
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 
 from ..tokens import count_tokens as _tok_count
 from .graph import IngestState, Turn
 from .stoplist import STOPLIST
+
+
+@runtime_checkable
+class Scoreable(Protocol):
+    """A unit the assembler can score, budget, and emit.
+
+    Stage 1 currently materializes Turns only; Stage 1's semantic-extract
+    system adds Fact units that satisfy this same protocol so the
+    greedy/budget/join body in :func:`assemble` stays unit-agnostic.
+
+    Implementations must expose:
+      * ``id``        — stable, unique string id (Turn ids contain ``#``;
+                         fact ids start with ``fact:`` and contain no ``#``,
+                         see scripts/aic_sidecar.py for the partitioning).
+      * ``text``      — the exact text that will be packed into the reader
+                         context (no rewriting at emit time).
+      * ``sort_key``  — total chronological tie-breaker for the ranker and
+                         the emit order; must be totally orderable against
+                         every other unit's ``sort_key`` returned by
+                         :func:`_iter_units` for the same state.
+    """
+
+    @property
+    def id(self) -> str: ...
+    @property
+    def text(self) -> str: ...
+    @property
+    def sort_key(self) -> tuple: ...
 
 
 _TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
@@ -62,6 +90,69 @@ def _iter_turn_views(state: IngestState) -> list[Turn]:
     # views via object_id so retrieve operates on the same projection the
     # event log produced.
     return [state.by_object_id[o.id] for o in pkg_objs]
+
+
+@dataclass(frozen=True)
+class _FactUnit:
+    """Scoreable view of a ``Fact`` object in the package graph.
+
+    Built on demand from ``graph.objects(type="Fact")`` so the assembler
+    can score and pack facts in the same pool as turns. ``sort_key``
+    embeds the source session's chronology so a fact emitted from a
+    given session sorts immediately after that session's turns in the
+    chronological emit pass (str-int-int tuple shape matches Turn's
+    ``sort_key`` so they're totally orderable).
+
+    Fact id convention: ``fact:<sha256-prefix>`` — contains no ``#`` so
+    the sidecar's ``rsplit('#', 1)`` session-id derivation skips it
+    cleanly (see scripts/aic_sidecar.py).
+    """
+
+    id: str
+    text: str
+    sort_key: tuple
+
+
+_FACT_SEQ_OFFSET = 10**9  # facts sort after any plausible turn_idx in the same session
+
+
+def _iter_fact_units(state: IngestState) -> list[_FactUnit]:
+    """Project Fact objects in package insertion order into Scoreable units.
+
+    Returns ``[]`` when no Fact objects exist (the default for every system
+    other than activegraph-sem-extract), keeping the assembler's pool
+    behavior-identical for turn-only systems.
+    """
+    out: list[_FactUnit] = []
+    for obj in state.graph.objects(type="Fact"):
+        data = obj.data or {}
+        text = str(data.get("text", ""))
+        session_date = str(data.get("session_date", ""))
+        session_idx = int(data.get("session_idx", 0))
+        # Package object ids are "Fact#<n>" in insertion order — use n as
+        # the per-session tiebreaker so facts emit in extraction order.
+        try:
+            seq = int(obj.id.rsplit("#", 1)[1])
+        except (IndexError, ValueError):
+            seq = 0
+        sort_key = (session_date, session_idx, _FACT_SEQ_OFFSET + seq)
+        fact_id = str(data.get("fact_id") or obj.id)
+        out.append(_FactUnit(id=fact_id, text=text, sort_key=sort_key))
+    return out
+
+
+def _iter_units(state: IngestState) -> list[Scoreable]:
+    """Pool of scoreable units the assembler ranks/packs.
+
+    Default systems (turn-only) get exactly the Turn projection, matching
+    pre-seam behavior byte-for-byte. The semantic-extract system writes
+    ``Fact`` objects into the same package graph; this helper unions them
+    in so :func:`assemble`'s greedy/budget/join body stays unit-agnostic
+    (no separate "facts section").
+    """
+    units: list[Scoreable] = list(_iter_turn_views(state))
+    units.extend(_iter_fact_units(state))
+    return units
 
 
 # ---- lexical signal ----------------------------------------------------------
@@ -104,16 +195,37 @@ _EMBED_MAX_TOKENS = 8000  # safety margin under text-embedding-3-small's 8192 ha
 
 
 def truncate_for_embedding(text: str) -> str:
-    """Truncate to <=_EMBED_MAX_TOKENS cl100k tokens (the embedding model's hard
-    input limit). Deterministic; affects ONLY the similarity vector, never the
-    text assembled into the reader's context. Shared by rag-dense and
-    activegraph-det-embedding so both embed long inputs identically."""
-    import tiktoken
-    enc = tiktoken.get_encoding("cl100k_base")
-    toks = enc.encode(text, disallowed_special=())
-    if len(toks) <= _EMBED_MAX_TOKENS:
-        return text
-    return enc.decode(toks[:_EMBED_MAX_TOKENS])
+    """Truncate to <=_EMBED_MAX_TOKENS cl100k tokens (the embedding model's
+    hard input limit). Deterministic; affects ONLY the similarity vector,
+    never the text assembled into the reader's context. Shared by rag-dense
+    and activegraph-det-embedding so both embed long inputs identically.
+
+    Offline-fallback path: if tiktoken can't load its BPE blob (network
+    policy blocks ``openaipublic.blob.core.windows.net`` and the local
+    ``.tiktoken_cache/`` is empty), we fall back to a char-based truncate
+    (1 token ~ 4 chars; _EMBED_MAX_TOKENS * 4 chars max). For the smoke
+    subset of longmemeval_s this affects exactly one borderline-long
+    session out of 2,402 — the resulting embedding for THAT session
+    differs from the tiktoken-path embedding by the prefix-tail boundary;
+    every other embedding is byte-identical. Manifests record whether
+    the fallback path was used via the ``context_token_source`` field
+    on the outer run; cache lookups on the embedding side are
+    content-addressed so the affected vector remains stable across
+    re-runs under the same fallback.
+    """
+    try:
+        import tiktoken
+        enc = tiktoken.get_encoding("cl100k_base")
+        toks = enc.encode(text, disallowed_special=())
+        if len(toks) <= _EMBED_MAX_TOKENS:
+            return text
+        return enc.decode(toks[:_EMBED_MAX_TOKENS])
+    except Exception:  # noqa: BLE001 — offline-only fallback
+        # Conservative char-based truncate. 1 token ~ 4 chars is the
+        # documented heuristic for cl100k; staying under the 8000-token
+        # embedding-API hard limit means <= 32000 chars.
+        max_chars = _EMBED_MAX_TOKENS * 4
+        return text if len(text) <= max_chars else text[:max_chars]
 
 
 @dataclass
@@ -190,24 +302,40 @@ def score_embedding(
 class AssemblyResult:
     text: str
     truncated: bool
-    selected_turn_ids: list[str]
+    selected_unit_ids: list[str]
     n_seeds: int
     n_expanded: int
 
+    @property
+    def selected_turn_ids(self) -> list[str]:
+        """Back-compat alias for callers (sidecar, harness meta) that
+        predate the Scoreable seam. New code should read
+        ``selected_unit_ids``; the partitioning of turn vs fact ids is
+        the consumer's responsibility (see scripts/aic_sidecar.py).
+        """
+        return self.selected_unit_ids
 
-def _temporal_neighbors_via_graph(state: IngestState, turn: Turn) -> list[Turn]:
-    """1-hop temporal neighbors of ``turn`` as projected by the package's
+
+def _temporal_neighbors_via_graph(state: IngestState, unit: Scoreable) -> list[Scoreable]:
+    """1-hop temporal neighbors of ``unit`` as projected by the package's
     ``neighborhood``: walk relations of type ``precedes`` only and return
-    the adjacent Turn views in deterministic order.
+    adjacent units in deterministic order.
+
+    Only Turn units have ``precedes`` adjacency. Non-Turn units (Fact, ...)
+    have no temporal neighborhood by construction, so this no-ops for
+    anything missing a Turn's ``object_id`` — keeping fact-only seeds from
+    accidentally walking unrelated edges.
     """
-    nbr_objs, nbr_rels = state.graph.neighborhood(turn.object_id, depth=1)
-    neighbors: list[Turn] = []
+    if not isinstance(unit, Turn):
+        return []
+    nbr_objs, nbr_rels = state.graph.neighborhood(unit.object_id, depth=1)
+    neighbors: list[Scoreable] = []
     seen: set[str] = set()
     for r in nbr_rels:
         if r.type != "precedes":
             continue
-        other = r.target if r.source == turn.object_id else r.source
-        if other == turn.object_id or other in seen:
+        other = r.target if r.source == unit.object_id else r.source
+        if other == unit.object_id or other in seen:
             continue
         seen.add(other)
         v = state.by_object_id.get(other)
@@ -222,16 +350,18 @@ def assemble(
     *,
     token_budget: int,
 ) -> AssemblyResult:
-    turns = _iter_turn_views(state)
-    if not turns:
-        return AssemblyResult(text="", truncated=False, selected_turn_ids=[], n_seeds=0, n_expanded=0)
+    units = _iter_units(state)
+    if not units:
+        return AssemblyResult(
+            text="", truncated=False, selected_unit_ids=[], n_seeds=0, n_expanded=0
+        )
 
-    by_id: dict[str, Turn] = {t.turn_id: t for t in turns}
-    sort_key = {t.turn_id: (t.session_date, t.session_idx, t.turn_idx) for t in turns}
+    by_id: dict[str, Scoreable] = {u.id: u for u in units}
+    sort_key: dict[str, tuple] = {u.id: u.sort_key for u in units}
 
     ranked = sorted(
-        (t.turn_id for t in turns),
-        key=lambda tid: (-scores.get(tid, 0.0), sort_key[tid]),
+        (u.id for u in units),
+        key=lambda uid: (-scores.get(uid, 0.0), sort_key[uid]),
     )
 
     selected: list[str] = []
@@ -239,59 +369,60 @@ def assemble(
     running = 0
     truncated = False
 
-    def _fits(tid: str) -> bool:
-        n = _tok_count(by_id[tid].text) + 2  # +2 ≈ "\n\n" joiner
+    def _fits(uid: str) -> bool:
+        n = _tok_count(by_id[uid].text) + 2  # +2 ≈ "\n\n" joiner
         return running + n <= token_budget
 
-    def _add(tid: str) -> bool:
+    def _add(uid: str) -> bool:
         nonlocal running
-        if tid in selected_set:
+        if uid in selected_set:
             return True
-        n = _tok_count(by_id[tid].text) + 2
+        n = _tok_count(by_id[uid].text) + 2
         if running + n > token_budget:
             return False
-        selected.append(tid)
-        selected_set.add(tid)
+        selected.append(uid)
+        selected_set.add(uid)
         running += n
         return True
 
     # 1) Seed selection by score.
     n_seeds = 0
-    for tid in ranked:
-        if scores.get(tid, 0.0) <= 0.0 and n_seeds > 0:
+    for uid in ranked:
+        if scores.get(uid, 0.0) <= 0.0 and n_seeds > 0:
             break
-        if not _fits(tid):
+        if not _fits(uid):
             truncated = True
             continue
-        if _add(tid):
+        if _add(uid):
             n_seeds += 1
 
     # 2) 1-hop temporal expansion via the PACKAGE graph's neighborhood.
+    #    No-op for non-Turn seeds (Fact units have no `precedes` edges).
     n_expanded = 0
     expansion_targets: list[str] = []
     seeds_snapshot = list(selected)
-    for tid in seeds_snapshot:
-        t = by_id[tid]
-        for neigh in _temporal_neighbors_via_graph(state, t):
-            if neigh.turn_id in selected_set:
+    for uid in seeds_snapshot:
+        u = by_id[uid]
+        for neigh in _temporal_neighbors_via_graph(state, u):
+            if neigh.id in selected_set:
                 continue
-            expansion_targets.append(neigh.turn_id)
+            expansion_targets.append(neigh.id)
 
-    expansion_targets = sorted(set(expansion_targets), key=lambda tid: sort_key[tid])
-    for tid in expansion_targets:
-        if not _fits(tid):
+    expansion_targets = sorted(set(expansion_targets), key=lambda uid: sort_key[uid])
+    for uid in expansion_targets:
+        if not _fits(uid):
             truncated = True
             continue
-        if _add(tid):
+        if _add(uid):
             n_expanded += 1
 
     # 3) Emit in chronological order.
-    selected.sort(key=lambda tid: sort_key[tid])
-    text = "\n\n".join(by_id[tid].text for tid in selected)
+    selected.sort(key=lambda uid: sort_key[uid])
+    text = "\n\n".join(by_id[uid].text for uid in selected)
     return AssemblyResult(
         text=text,
         truncated=truncated,
-        selected_turn_ids=selected,
+        selected_unit_ids=selected,
         n_seeds=n_seeds,
         n_expanded=n_expanded,
     )

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 
 # Force the char/4 fallback so this script never needs network. The behavior
 # we test here doesn't depend on the tokenizer, only on whether truncation
@@ -265,15 +266,239 @@ def _ag_embedding_skip_or_smoke(cfg) -> tuple[str, str]:
         return (SKIP, "activegraph-det-embedding skipped (OPENAI_API_KEY not set)")
     inst = _make_instance_for_activegraph()
     sysobj = build_system("activegraph-det-embedding", cfg)
-    st = sysobj.ingest(inst)
-    a = sysobj.retrieve(st, inst.question, inst.question_date)
-    b = sysobj.retrieve(st, inst.question, inst.question_date)
+    try:
+        st = sysobj.ingest(inst)
+        a = sysobj.retrieve(st, inst.question, inst.question_date)
+        b = sysobj.retrieve(st, inst.question, inst.question_date)
+    except Exception as e:  # noqa: BLE001
+        # Embedding endpoint unreachable (e.g. OpenAI host not in the
+        # environment's egress allowlist). Record an explicit skip rather
+        # than a failure — the embedding path is simply not exercisable here.
+        if "allowlist" in str(e).lower() or e.__class__.__name__ in (
+            "PermissionDeniedError", "APIConnectionError", "APITimeoutError",
+        ):
+            return (SKIP, f"activegraph-det-embedding skipped ({e.__class__.__name__}: "
+                          f"OpenAI endpoint unreachable from this environment)")
+        raise
     deterministic = a.text == b.text
     has_evidence = "Mochi" in a.text
     ok = deterministic and has_evidence
     return (PASS if ok else FAIL,
             f"activegraph-det-embedding (deterministic={deterministic}, "
             f"has_evidence={has_evidence})")
+
+
+# ---- compiled semantic-memory assembly tests (offline, injected scores) -----
+
+
+def _build_fact_graph(cfg):
+    """Build a small turn graph and hand-write two Facts + `mentions` edges
+    so the compiled-memory assemblers can be exercised with INJECTED scores
+    (no embedding API). Returns (_SemState, fact_id_by_label)."""
+    from activegraph_lme.systems.activegraph_sem_extract import _SemState
+
+    inst = _make_instance_for_activegraph()
+    state = build_graph(
+        inst.haystack_session_ids,
+        inst.haystack_dates,
+        inst.haystack_sessions,
+        min_token_length=cfg.activegraph.min_token_length,
+        min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+        max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+    )
+    # Fact CAT -> the user turn in s_evidence (turn 0); Fact GUITAR -> the
+    # user turn in s_unrelated (turn 0). Distinct sessions so chronology is
+    # testable.
+    ev_turn = state.by_turn_id["s_evidence#0"]
+    un_turn = state.by_turn_id["s_unrelated#0"]
+    f_cat = state.graph.add_object(
+        "Fact",
+        {"fact_id": "fact:cat", "text": "The user adopted a kitten named Mochi.",
+         "session_id": "s_evidence", "session_date": "2025-04-20", "session_idx": 1},
+    )
+    state.graph.add_relation(f_cat.id, ev_turn.object_id, "mentions")
+    f_guitar = state.graph.add_object(
+        "Fact",
+        {"fact_id": "fact:guitar", "text": "The user is learning guitar chords.",
+         "session_id": "s_unrelated", "session_date": "2025-05-10", "session_idx": 2},
+    )
+    state.graph.add_relation(f_guitar.id, un_turn.object_id, "mentions")
+    return _SemState(state=state, meta={}), {"cat": "fact:cat", "guitar": "fact:guitar"}
+
+
+def _sem_hybrid_assembly(cfg) -> tuple[str, str]:
+    from activegraph_lme.systems.activegraph_sem_hybrid import (
+        ActiveGraphSemHybridSystem,
+    )
+    from activegraph_lme.systems._sem_compiled import project_facts
+
+    sem_state, _ = _build_fact_graph(cfg)
+    sys = ActiveGraphSemHybridSystem(
+        token_budget=2500, min_token_length=cfg.activegraph.min_token_length,
+        min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+        max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+        extraction_cache_dir="/tmp/_pt_nocache",
+    )
+    facts = project_facts(sem_state.state)
+    scores = {"fact:cat": 0.9, "fact:guitar": 0.1}
+    a = sys._assemble(sem_state, facts, scores)
+    b = sys._assemble(sem_state, facts, scores)
+    has_header = "[fact: The user adopted a kitten named Mochi.]" in a.text
+    has_anchor = "adopted a kitten" in a.text.lower()  # provenance turn text
+    # Chronological: the cat fact (session_idx 1) precedes guitar (idx 2).
+    chrono = a.text.index("Mochi.]") < a.text.index("guitar chords.]")
+    deterministic = a.text == b.text
+    meta_ok = a.meta["n_facts_selected"] == 2 and a.meta["n_unique_turns_rendered"] == 2
+    ok = has_header and has_anchor and chrono and deterministic and meta_ok
+    return (PASS if ok else FAIL,
+            f"sem-hybrid assembly (header={has_header}, anchor={has_anchor}, "
+            f"chrono={chrono}, deterministic={deterministic}, meta_ok={meta_ok})")
+
+
+def _sem_hybrid_budget(cfg) -> tuple[str, str]:
+    from activegraph_lme.systems.activegraph_sem_hybrid import (
+        ActiveGraphSemHybridSystem,
+    )
+    from activegraph_lme.systems._sem_compiled import project_facts
+
+    sem_state, _ = _build_fact_graph(cfg)
+    # Budget tight enough for one fact+anchor but not two -> truncated, and
+    # only the top-scored (cat) fact survives.
+    sys = ActiveGraphSemHybridSystem(
+        token_budget=45, min_token_length=cfg.activegraph.min_token_length,
+        min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+        max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+        extraction_cache_dir="/tmp/_pt_nocache",
+    )
+    facts = project_facts(sem_state.state)
+    a = sys._assemble(sem_state, facts, {"fact:cat": 0.9, "fact:guitar": 0.1})
+    ok = a.truncated and a.meta["n_facts_selected"] == 1 and "Mochi.]" in a.text
+    return (PASS if ok else FAIL,
+            f"sem-hybrid budget (truncated={a.truncated}, "
+            f"n_facts_selected={a.meta['n_facts_selected']})")
+
+
+def _sem_index_assembly(cfg) -> tuple[str, str]:
+    from activegraph_lme.systems.activegraph_sem_index import (
+        ActiveGraphSemIndexSystem,
+    )
+    from activegraph_lme.systems._sem_compiled import project_facts
+
+    sem_state, _ = _build_fact_graph(cfg)
+    sys = ActiveGraphSemIndexSystem(
+        token_budget=2500, min_token_length=cfg.activegraph.min_token_length,
+        min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+        max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
+        extraction_cache_dir="/tmp/_pt_nocache",
+    )
+    facts = project_facts(sem_state.state)
+    a = sys._assemble(sem_state, facts, {"fact:cat": 0.9, "fact:guitar": 0.1})
+    b = sys._assemble(sem_state, facts, {"fact:cat": 0.9, "fact:guitar": 0.1})
+    no_facts_in_text = "[fact:" not in a.text  # reader never sees facts
+    has_turn = "adopted a kitten" in a.text.lower()
+    deterministic = a.text == b.text
+    selected_via_fact = a.meta["n_facts_selected"] == 2
+    ok = no_facts_in_text and has_turn and deterministic and selected_via_fact
+    return (PASS if ok else FAIL,
+            f"sem-index assembly (no_facts_in_text={no_facts_in_text}, "
+            f"has_turn={has_turn}, deterministic={deterministic}, "
+            f"selected_via_fact={selected_via_fact})")
+
+
+def _role_cache_roundtrip(cfg) -> tuple[str, str]:
+    """Role is part of the cache key: the SAME (session_id, content_sha256)
+    stores two distinct entries (user + assistant). Round-trips on disk."""
+    import tempfile
+    from activegraph_lme.systems.activegraph_sem_extract import (
+        _ExtractedFact, _ExtractedFactList, _PersistentExtractionCache,
+        _compute_combined_prompt_sha256,
+    )
+    with tempfile.TemporaryDirectory() as d:
+        kw = dict(cache_dir=Path(d), seed="A-v2",
+                  prompt_sha256=_compute_combined_prompt_sha256(),
+                  extractor_model_requested="claude-sonnet-4-5")
+        c = _PersistentExtractionCache(**kw)
+        u = _ExtractedFactList(facts=[_ExtractedFact(text="The user owns a kayak.")])
+        a = _ExtractedFactList(facts=[_ExtractedFact(text="The assistant recommended a 12ft kayak.")])
+        c.put("s1", "csum1", "user", u, extractor_model_resolved="m")
+        c.put("s1", "csum1", "assistant", a, extractor_model_resolved="m")
+        c.flush_manifest()
+        # Reload from disk and confirm both roles survive under one (sid,csum).
+        c2 = _PersistentExtractionCache(**kw)
+        got_u = c2.get("s1", "csum1", "user")
+        got_a = c2.get("s1", "csum1", "assistant")
+        two_entries = len(c2) == 2
+        roles_distinct = (got_u is not None and got_a is not None
+                          and got_u.facts[0].text != got_a.facts[0].text)
+    ok = two_entries and roles_distinct
+    return (PASS if ok else FAIL,
+            f"role cache round-trip (entries={len(c2)}, roles_distinct={roles_distinct})")
+
+
+def _build_write_path_immediate(cfg) -> tuple[str, str]:
+    """build_extract_cache persists each (session, role) unit immediately
+    and per-entry: a parse-error on one unit must NOT block any other unit
+    from reaching disk (no partner-role gate, no holes). Drives the REAL
+    serial loop with a mocked extractor — offline, no API."""
+    import sys as _sys
+    import tempfile
+    from pathlib import Path as _Path
+
+    _sys.path.insert(0, str(_Path("scripts").resolve()))
+    import build_extract_cache as bm  # noqa: E402
+    from activegraph_lme.systems.activegraph_sem_extract import (
+        _PersistentExtractionCache, _compute_combined_prompt_sha256,
+    )
+
+    sessions = [
+        (f"sess-{i:02d}", "2025-01-01", i, [{"role": "user", "content": "hi"}])
+        for i in range(10)
+    ]
+    units = [(s, role) for s in sessions for role in ("user", "assistant")]
+
+    def _mock(s, role):
+        sid = s[0]
+        if sid == "sess-03" and role == "assistant":
+            return sid, f"csum-{sid}", None, None  # parse-error -> stub
+        return (sid, f"csum-{sid}",
+                {"facts": [{"text": f"{role} fact {sid}",
+                            "mentioned_turn_idxs": [0]}]},
+                "m")
+
+    with tempfile.TemporaryDirectory() as d:
+        cache = _PersistentExtractionCache(
+            cache_dir=_Path(d), seed="A-v2",
+            prompt_sha256=_compute_combined_prompt_sha256(),
+            extractor_model_requested="claude-sonnet-4-5",
+        )
+        n = bm._run_units(cache, units, serial=True, workers=1, extract_fn=_mock)
+        on_disk = [
+            ln for ln in cache.cache_path.read_text().splitlines() if ln.strip()
+        ]
+    ok = n == 20 and len(on_disk) == 20
+    return (PASS if ok else FAIL,
+            f"build write path immediate + ungated (appended={n}, on_disk={len(on_disk)})")
+
+
+def _seed_a_invalidation(cfg) -> tuple[str, str]:
+    """The committed user-only seed-A manifest must be REFUSED under the
+    role-aware (combined-prompt) signature — the intended invalidation."""
+    from activegraph_lme.systems.activegraph_sem_extract import (
+        _PersistentExtractionCache, CacheManifestMismatchError,
+        _compute_combined_prompt_sha256,
+    )
+    seed_dir = Path("data/sem_extract_cache")
+    if not (seed_dir / "seed-A.manifest.json").exists():
+        return (SKIP, "seed-A not present; invalidation guard not exercised")
+    try:
+        _PersistentExtractionCache(
+            cache_dir=seed_dir, seed="A",
+            prompt_sha256=_compute_combined_prompt_sha256(),
+            extractor_model_requested="claude-sonnet-4-5",
+        )
+    except CacheManifestMismatchError:
+        return (PASS, "seed-A correctly refused under role-aware signature")
+    return (FAIL, "seed-A loaded under new signature (should have been refused)")
 
 
 def main() -> int:
@@ -307,6 +532,16 @@ def main() -> int:
     results.append(_ag_lexical_finds_evidence(cfg))
     results.append(_ag_temporal_expansion(cfg))
     results.append(_ag_embedding_skip_or_smoke(cfg))
+
+    # Compiled semantic-memory assembly (offline, injected scores — no API).
+    results.append(_sem_hybrid_assembly(cfg))
+    results.append(_sem_hybrid_budget(cfg))
+    results.append(_sem_index_assembly(cfg))
+
+    # Role-aware extraction (offline).
+    results.append(_role_cache_roundtrip(cfg))
+    results.append(_build_write_path_immediate(cfg))
+    results.append(_seed_a_invalidation(cfg))
 
     n_fail = 0
     for status, msg in results:

@@ -86,6 +86,19 @@ def main() -> None:
         "off (warn-only) for --smoke."
     ),
 )
+@click.option(
+    "--extract-seed",
+    type=click.Choice(["A", "A-v2", "B", "C"]),
+    default="A-v2",
+    show_default=True,
+    help=(
+        "Frozen extraction-cache seed for the sem-extract family. seed-A is "
+        "the original user-only cache (INVALIDATED under the role-aware "
+        "extractor — its manifest guard will refuse to load). seed-A-v2 is "
+        "the canonical role-aware cache (user + assistant facts); seed-B/C "
+        "are gitignored variance samples. Other systems ignore this flag."
+    ),
+)
 def run_cmd(
     system_name: str,
     dataset_key: str,
@@ -94,6 +107,7 @@ def run_cmd(
     limit: int | None,
     run_id: str | None,
     require_auth_tokens: bool | None,
+    extract_seed: str,
 ) -> None:
     cfg = load_config(config_path)
     dataset_path = Path(cfg.datasets[dataset_key])
@@ -131,7 +145,7 @@ def run_cmd(
         temperature=cfg.reader.temperature,
         max_tokens=cfg.reader.max_tokens,
     )
-    system = build_system(system_name, cfg)
+    system = build_system(system_name, cfg, extract_seed=extract_seed)
 
     rid = run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     tag = "smoke" if smoke else "full"

@@ -1,0 +1,323 @@
+  0%|          | 0/50 [00:00<?, ?it/s]{
+    "question": "How many days before my best friend's birthday party did I order her gift?",
+    "answer": "7 days. 8 days (including the last day) is also acceptable.",
+    "hypothesis": "Based on the conversation history, you mentioned that you ordered the personalized photo album from Shutterfly on April 15th, and your best friend's birthday party was on April 22nd.\n\nSo you ordered her gift **7 days** before her birthday party.",
+    "autoeval_label": true
+}
+  2%|▏         | 1/50 [00:00<00:35,  1.37it/s]{
+    "question": "Which gift did I buy first, the necklace for my sister or the photo album for my mom?",
+    "answer": "the photo album for my mom",
+    "hypothesis": "Based on the conversation history, you bought the photo album for your mom first. You mentioned that you \"ordered a customized photo album from Shutterfly two weeks ago for my mom's anniversary,\" while you said you \"already got her [your sister] a beautiful necklace from Tiffany's last weekend.\" Since two weeks ago comes before last weekend, the photo album was purchased first.",
+    "autoeval_label": true
+}
+  4%|▍         | 2/50 [00:02<00:51,  1.07s/it]{
+    "question": "Which event happened first, my attendance at a cultural festival or the start of my Spanish classes?",
+    "answer": "Spanish classes",
+    "hypothesis": "Based on the conversation history provided, I can see that in Session answer_b10f3828_1, you mentioned that you \"attended a cultural festival in my hometown yesterday.\" \n\nIn Session answer_b10f3828_2, you mentioned that you've \"been taking Spanish classes for the past three months.\"\n\nSince you attended the cultural festival \"yesterday\" (relative to the conversation date of 2023/05/20) and had been taking Spanish classes for \"the past three months\" at that point, your Spanish classes started first - approximately three months before the cultural festival.",
+    "autoeval_label": true
+}
+  6%|▌         | 3/50 [00:03<00:50,  1.07s/it]{
+    "question": "When did I book the Airbnb in Sacramento?",
+    "answer": "The information provided is not enough. You only mentioned booking Airbnb in San Francisco.",
+    "hypothesis": "Based on the conversation history provided, I don't see any mention of you booking an Airbnb in Sacramento. The conversations discuss:\n\n1. Your plans to stay in San Francisco (with a past experience staying in Haight-Ashbury for your best friend's wedding)\n2. Your upcoming trip to San Francisco next month\n3. Various other topics like restaurants, tailors, camping, and road trips\n\nThere is no information about booking an Airbnb in Sacramento in these conversations.",
+    "autoeval_label": true
+}
+  8%|▊         | 4/50 [00:03<00:36,  1.24it/s]{
+    "question": "How many different doctors did I visit?",
+    "answer": "I visited three different doctors: a primary care physician, an ENT specialist, and a dermatologist.",
+    "hypothesis": "Based on the conversation history provided, you visited **3 different doctors**:\n\n1. **Dr. Patel** - ENT specialist who diagnosed you with chronic sinusitis\n2. **Dr. Lee** - Dermatologist who performed a biopsy on a suspicious mole on your back\n3. **Dr. Smith** - Primary care physician who diagnosed and treated you for a UTI",
+    "autoeval_label": true
+}
+ 10%|█         | 5/50 [00:04<00:34,  1.32it/s]{
+    "question": "What is the total amount I spent on luxury items in the past few months?",
+    "answer": "$2,500",
+    "hypothesis": "Based on our conversation history, I can see that you mentioned purchasing a Gucci handbag for $1,200. However, you also mentioned that you tend to splurge on luxury items \"every few months,\" and you've discussed purchasing high-end accessories like handbags and shoes, as well as occasional luxury clothing items like evening gowns.\n\nUnfortunately, you haven't provided specific details about other luxury purchases or their amounts in our conversations. The only concrete luxury purchase amount mentioned is the $1,200 Gucci handbag.\n\nTo get a complete picture of your total luxury spending over the past few months, I would need more information about:\n- Other specific luxury purchases you've made\n- The amounts spent on those items\n- The timeframe you're asking about\n\nIf you'd like to track this going forward, we could use the expense tracker template I provided earlier to help you monitor your luxury spending more systematically.",
+    "autoeval_label": false
+}
+ 12%|█▏        | 6/50 [00:04<00:28,  1.54it/s]{
+    "question": "How many weddings have I attended in this year?",
+    "answer": "I attended three weddings. The couples were Rachel and Mike, Emily and Sarah, and Jen and Tom.",
+    "hypothesis": "Based on the conversation history provided, I can identify the following weddings you've attended:\n\n1. Your cousin Rachel's wedding at a vineyard in August\n2. Your friend Jen's wedding at a rustic barn in the countryside last weekend (from the October 15th conversation)\n3. Your college roommate Emily's wedding in the city at a rooftop garden\n\nSo you have attended **3 weddings** this year that are mentioned in the conversations.",
+    "autoeval_label": true
+}
+ 14%|█▍        | 7/50 [00:05<00:24,  1.73it/s]{
+    "question": "How many babies were born to friends and family members in the last few months?",
+    "answer": 5,
+    "hypothesis": "Based on the conversation history provided, I can identify the following babies born to friends and family members in the last few months:\n\n1. **Jasper** - David's baby boy (born a few weeks ago, mentioned in Session answer_fa526fc0_4)\n2. **Max** - Rachel's baby boy (born in March, mentioned in multiple sessions)\n3. **Charlotte** - Mike and Emma's baby girl (born a few weeks after Rachel's baby shower in February, mentioned in Session answer_fa526fc0_2)\n4. **Ava and Lily** - The user's aunt's twin girls (born in April, mentioned in multiple sessions)\n\nThat's **5 babies total** (counting the twins as 2):\n- 1 baby (Jasper)\n- 1 baby (Max)\n- 1 baby (Charlotte)\n- 2 babies (Ava and Lily, twins)\n\nNote: Aaliyah was mentioned as Sarah's adopted child, but the conversation doesn't specify when the adoption occurred or if it was in \"the last few months.\"",
+    "autoeval_label": true
+}
+ 16%|█▌        | 8/50 [00:06<00:32,  1.28it/s]{
+    "question": "How often do I attend yoga classes to help with my anxiety?",
+    "answer": "Three times a week.",
+    "hypothesis": "Based on the conversation history, you attend yoga classes **three times a week** to help with your anxiety. You mentioned that you're more focused on days when you attend yoga classes and that it really helps you clear your head.",
+    "autoeval_label": true
+}
+ 18%|█▊        | 9/50 [00:07<00:32,  1.27it/s]{
+    "question": "How many short stories have I written since I started writing regularly?",
+    "answer": "seven",
+    "hypothesis": "According to the conversation history, you mentioned that you've written **7 short stories** since you started writing regularly three months ago. This was mentioned in your conversation on May 30th, 2023.",
+    "autoeval_label": true
+}
+ 20%|██        | 10/50 [00:07<00:26,  1.50it/s]{
+    "question": "For the coffee-to-water ratio in my French press, did I switch to more water per tablespoon of coffee, or less?",
+    "answer": "You switched to less water (5 ounces) per tablespoon of coffee.",
+    "hypothesis": "Based on the conversation history, you switched to **more water** per tablespoon of coffee.\n\nIn the first session (February 11, 2023), you mentioned using **1 tablespoon of coffee for every 6 ounces of water**.\n\nIn the second session (June 30, 2023), you mentioned using **1 tablespoon of coffee for every 5 ounces of water**.\n\nSince you went from 6 ounces to 5 ounces of water per tablespoon, you actually switched to **less water** per tablespoon of coffee, not more. I apologize for the initial confusion in my response.",
+    "autoeval_label": true
+}
+ 22%|██▏       | 11/50 [00:07<00:23,  1.65it/s]{
+    "question": "Where did I get my guitar serviced?",
+    "answer": "The music shop on Main St.",
+    "hypothesis": "Based on the conversation history, you got your guitar serviced at a music shop on Main St called \"Rhythm Central.\"",
+    "autoeval_label": true
+}
+ 24%|██▍       | 12/50 [00:08<00:20,  1.82it/s]{
+    "question": "How many autographed baseballs have I added to my collection in the first three months of collection?",
+    "answer": "15",
+    "hypothesis": "Based on the conversation history, in your first session (July 11, 2023), you mentioned that you had collected 15 autographed baseballs in the first three months of collecting.",
+    "autoeval_label": true
+}
+ 26%|██▌       | 13/50 [00:24<03:12,  5.21s/it]{
+    "question": "What type of vehicle model am I currently working on?",
+    "answer": "Ford F-150 pickup truck",
+    "hypothesis": "Based on the conversation history, you are currently working on a **Ford F-150 pickup truck model**. \n\nYou mentioned that you \"just wrapped up a model and switched to a Ford F-150 pickup truck\" in the second session, and all subsequent discussions in that session have been about weathering and detailing this Ford F-150 model.",
+    "autoeval_label": true
+}
+ 28%|██▊       | 14/50 [00:24<02:16,  3.80s/it]{
+    "question": "Do I have a spare screwdriver for opening up my laptop?",
+    "answer": "Yes",
+    "hypothesis": "Based on the conversation history, **yes, you do have a spare screwdriver**. \n\nIn the conversation from August 15th, you mentioned: \"I actually have a spare screwdriver that I picked up when I organized my computer desk a while back, so I'm all set there.\"\n\nSo you should be good to go for opening up your laptop!",
+    "autoeval_label": true
+}
+ 30%|███       | 15/50 [00:25<01:37,  2.80s/it]{
+    "question": "How often do I see Dr. Johnson?",
+    "answer": "The information provided is not enough. You mentioned seeing Dr. Smith but not Dr. Johnson.",
+    "hypothesis": "Based on the conversation history provided, you don't see Dr. Johnson. You see **Dr. Smith**. \n\nAccording to the conversations, you see Dr. Smith:\n- Every two weeks (mentioned in the first session)\n- Every week (mentioned in the second session)\n\nThere appears to be some inconsistency in the frequency mentioned, but the therapist you're seeing is Dr. Smith, not Dr. Johnson.",
+    "autoeval_label": true
+}
+ 32%|███▏      | 16/50 [00:25<01:11,  2.11s/it]{
+    "question": "Can you recommend some resources where I can learn more about video editing?",
+    "answer": "The user would prefer responses that suggest resources specifically tailored to Adobe Premiere Pro, especially those that delve into its advanced settings. They might not prefer general video editing resources or resources related to other video editing software.",
+    "hypothesis": "Based on our previous conversations about Adobe Premiere Pro and color grading, here are some resources I'd recommend for learning more about video editing:\n\n**Official Adobe Resources:**\n- Adobe Premiere Pro's official documentation and tutorials\n- Adobe Creative Cloud YouTube channel\n\n**YouTube Channels:**\n- Premiere Bro\n- Video Copilot\n- Adobe Creative Cloud\n\n**Online Learning Platforms:**\n- Udemy\n- LinkedIn Learning\n- Skillshare\n\n**Communities and Forums:**\n- Reddit's r/premierepro\n- Adobe's Premiere Pro forum\n\nThese resources cover a wide range of topics from beginner to advanced techniques in Premiere Pro, including the color grading tools we've been discussing like the Lumetri Color Panel, Curves, and Color Wheels.\n\nSince you mentioned you're still getting the hang of color grading, I'd particularly recommend starting with Adobe's official tutorials and then exploring the YouTube channels for practical, project-based learning. The online courses on platforms like Udemy and LinkedIn Learning can provide more structured, comprehensive training when you're ready to dive deeper.",
+    "autoeval_label": true
+}
+ 34%|███▍      | 17/50 [00:26<00:51,  1.55s/it]{
+    "question": "I am planning another theme park weekend; do you have any suggestions?",
+    "answer": "The user would prefer theme park suggestions that cater to their interest in both thrill rides and special events, utilizing their previous experiences at Disneyland, Knott's Berry Farm, Six Flags Magic Mountain, and Universal Studios Hollywood as a reference point. They would also appreciate recommendations that highlight unique food experiences and nighttime shows. The user might not prefer suggestions that focus solely on one aspect of theme parks, such as only thrill rides or only family-friendly attractions, and may not be interested in parks that lack special events or unique dining options.",
+    "hypothesis": "Based on our conversation, you've recently visited Disneyland, Knott's Berry Farm, Six Flags Magic Mountain, and Universal Studios Hollywood, and you're particularly interested in Halloween-themed events. \n\nSince we just discussed the upcoming Halloween events at these parks, here are some suggestions for your theme park weekend:\n\n**Timing Consideration:**\nSince today is August 15, 2023, the Halloween events haven't started yet. They typically begin in mid-September. So you have a few options:\n\n1. **Wait for Halloween Season** (mid-September onwards):\n   - Book the Universal Studios Hollywood VIP Experience with Gourmet Buffet and Behind-the-Scenes Tour that we just discussed\n   - Visit Knott's Scary Farm for their haunted mazes\n   - Experience Disneyland's Halloween Time with the Oogie Boogie Bash\n   - Check out Six Flags Magic Mountain's Fright Fest\n\n2. **Plan a Summer Weekend Now:**\n   - Enjoy the parks' regular summer offerings and thrill rides\n   - Experience any summer-exclusive shows or attractions\n   - Take advantage of potentially shorter lines before the Halloween crowds arrive\n\n3. **Mix It Up:**\n   - Consider visiting a park you haven't been to recently\n   - Try different dining experiences at the parks you've already visited\n\nWhat timeframe are you considering for your theme park weekend - before or during the Halloween season?",
+    "autoeval_label": true
+}
+ 36%|███▌      | 18/50 [00:26<00:39,  1.23s/it]{
+    "question": "Can you suggest some useful accessories for my phone?",
+    "answer": "The user would prefer suggestions of accessories that are compatible with an iPhone 13 Pro, such as high-quality screen protectors, durable cases, portable power banks, or phone wallet cases. They may not prefer suggestions of accessories that are not compatible with Apple products or do not enhance the functionality or protection of their phone.",
+    "hypothesis": "Based on our previous conversations, you already have or are considering several accessories for your iPhone 13 Pro! Here's a summary of what we've discussed:\n\n**You already have:**\n- A portable power bank from Best Buy that's working well\n\n**You're considering:**\n- A new screen protector (to replace your cracked one)\n- A phone wallet case\n- A wireless charging power bank\n\n**Additional accessories you might find useful:**\n\n1. **Car Mount/Holder**: For hands-free navigation and calls while driving\n2. **Wireless Earbuds/Headphones**: For convenient audio listening\n3. **Phone Stand/Dock**: For hands-free viewing at your desk or bedside\n4. **Camera Lens Attachments**: To enhance your iPhone's photography capabilities\n5. **PopSocket or Phone Grip**: For better grip and handling\n6. **USB-C to Lightning Cable**: For faster charging (if you have a compatible charger)\n7. **Cleaning Kit**: To keep your screen and case clean\n8. **Armband**: For workouts and running\n\nSince you're already looking at screen protectors, wallet cases, and wireless charging power banks, these additional accessories could complement your setup nicely. Is there a specific type of accessory you're most interested in learning more about?",
+    "autoeval_label": true
+}
+ 38%|███▊      | 19/50 [00:27<00:31,  1.00s/it]{
+    "question": "I'm checking our previous chat about the shift rotation sheet for GM social media agents. Can you remind me what was the rotation for Admon on a Sunday?",
+    "answer": "Admon was assigned to the 8 am - 4 pm (Day Shift) on Sundays.",
+    "hypothesis": "Based on the conversation history, on Sunday, Admon was assigned to the **8 am - 4 pm (Day Shift)**.",
+    "autoeval_label": true
+}
+ 40%|████      | 20/50 [00:27<00:25,  1.17it/s]{
+    "question": "I'm planning to revisit Orlando. I was wondering if you could remind me of that unique dessert shop with the giant milkshakes we talked about last time?",
+    "answer": "The Sugar Factory at Icon Park.",
+    "hypothesis": "Based on our previous conversation, the dessert shop with giant milkshakes that we discussed is **The Sugar Factory**, which is located at Icon Park. It offers an enormous menu of sweet treats, including specialty drinks and those giant milkshakes you're remembering.",
+    "autoeval_label": true
+}
+ 42%|████▏     | 21/50 [00:27<00:20,  1.38it/s]{
+    "question": "I'm planning my trip to Amsterdam again and I was wondering, what was the name of that hostel near the Red Light District that you recommended last time?",
+    "answer": "International Budget Hostel",
+    "hypothesis": "Based on the conversation history, the hostel near the Red Light District that was recommended was **International Budget Hostel**. It was described as being situated near the famous Red Light District and offering affordable dormitory-style rooms and private rooms, with a fully equipped kitchen and a lounge area.",
+    "autoeval_label": true
+}
+ 44%|████▍     | 22/50 [00:28<00:18,  1.54it/s]{
+    "question": "I was going through our previous conversation about political propaganda and humor, and I was wondering if you could remind me of that Soviet cartoon you mentioned that mocked Western culture?",
+    "answer": "Nu, pogodi!",
+    "hypothesis": "Based on the conversation history, the Soviet cartoon I mentioned was **\"Nu, pogodi!\"** which mocked Western culture and portrayed the Soviet Union as superior.",
+    "autoeval_label": true
+}
+ 46%|████▌     | 23/50 [00:28<00:15,  1.70it/s]{
+    "question": "I was looking back at our previous conversation about buying unique engagement rings directly from designers. Can you remind me of the Instagram handle of the UK-based designer who works with unusual gemstones?",
+    "answer": "@jessica_poole_jewellery",
+    "hypothesis": "Based on the conversation history, the UK-based designer who works with unusual gemstones is Jessica Poole, and her Instagram handle is @jessica_poole_jewellery.",
+    "autoeval_label": true
+}
+ 48%|████▊     | 24/50 [00:29<00:15,  1.65it/s]{
+    "question": "What was my last name before I changed it?",
+    "answer": "Johnson",
+    "hypothesis": "Based on the conversation history, your last name before you changed it was **Johnson**. You mentioned in the first conversation that your old name was Johnson, but now it's Winters.",
+    "autoeval_label": true
+}
+ 50%|█████     | 25/50 [00:30<00:14,  1.68it/s]{
+    "question": "How long did it take me to assemble the IKEA bookshelf?",
+    "answer": "4 hours",
+    "hypothesis": "According to the conversation history, you mentioned that it took you 4 hours to assemble the IKEA bookshelf.",
+    "autoeval_label": true
+}
+ 52%|█████▏    | 26/50 [00:30<00:12,  1.93it/s]{
+    "question": "Where did I attend my cousin's wedding?",
+    "answer": "The Grand Ballroom",
+    "hypothesis": "According to the conversation history, you attended your cousin's wedding at the Grand Ballroom last weekend.",
+    "autoeval_label": true
+}
+ 54%|█████▍    | 27/50 [00:30<00:10,  2.14it/s]{
+    "question": "Who did I have a conversation with about destiny?",
+    "answer": "Sarah",
+    "hypothesis": "Based on the conversation history, you had a conversation with your friend **Sarah** about destiny. You mentioned that Sarah was saying \"everything happens for a reason,\" which got you thinking about your own beliefs on destiny.",
+    "autoeval_label": true
+}
+ 56%|█████▌    | 28/50 [00:31<00:09,  2.24it/s]{
+    "question": "Where did I attend the Imagine Dragons concert?",
+    "answer": "Xfinity Center",
+    "hypothesis": "According to the conversation history, you attended the Imagine Dragons concert at the **Xfinity Center on June 15th**.",
+    "autoeval_label": true
+}
+ 58%|█████▊    | 29/50 [00:31<00:09,  2.22it/s]{
+    "question": "Where did I meet Sophia?",
+    "answer": "a coffee shop in the city",
+    "hypothesis": "According to the conversation history, you met Sophia at a coffee shop in the city.",
+    "autoeval_label": true
+}
+ 60%|██████    | 30/50 [00:32<00:08,  2.25it/s]{
+    "question": "What did I bake for my uncle's birthday party?",
+    "answer": "You did not mention this information. You mentioned baking for your niece's birthday party but not your uncle's",
+    "hypothesis": "Based on the conversation history provided, you mentioned baking a lemon blueberry cake for your **niece's** birthday party, not your uncle's birthday party. There is no mention of baking anything for your uncle's birthday party in this conversation.",
+    "autoeval_label": true
+}
+ 62%|██████▏   | 31/50 [00:32<00:08,  2.29it/s]{
+    "question": "How many months have passed since I participated in two charity events in a row, on consecutive days?",
+    "answer": 2,
+    "hypothesis": "Looking at your conversation history, I can see you mentioned participating in the \"Walk for Hunger\" charity event on 2023/03/19 (Sunday). However, I don't see any mention of you participating in another charity event on the consecutive day (2023/03/20).\n\nYou did mention participating in the \"24-Hour Bike Ride\" charity event in an earlier conversation (Session answer_4bfcc250_3 from 2023/02/14), but that was not on a consecutive day to the Walk for Hunger event.\n\nBased on the information provided in the conversation history, I cannot identify two charity events you participated in on consecutive days, so I cannot calculate how many months have passed since that occurrence.",
+    "autoeval_label": false
+}
+ 64%|██████▍   | 32/50 [00:32<00:08,  2.18it/s]{
+    "question": "How many weeks in total do I spent on reading 'The Nightingale' and listening to 'Sapiens: A Brief History of Humankind' and 'The Power'?",
+    "answer": "2 weeks for 'The Nightingale', 4 weeks for 'Sapiens: A Brief History of Humankind', and 2 weeks for 'The Power', so a total of 8 weeks.",
+    "hypothesis": "Looking at the conversation history:\n\n1. **'The Nightingale' by Kristin Hannah**: You mentioned starting to read this book on 2022/01/01 and finished it by 2022/01/15 (mentioned in Session answer_e9ad5914_2).\n\n2. **'Sapiens: A Brief History of Humankind' by Yuval Noah Harari**: You mentioned starting to listen to this audiobook on 2022/01/15 (Session answer_e9ad5914_2) and were still listening to it on 2022/03/01 (Session answer_e9ad5914_4), and finished it by 2022/03/06 (Session answer_e9ad5914_5).\n\n3. **'The Power' by Naomi Alderman**: You mentioned starting to listen to this audiobook on 2022/03/06 (Session answer_e9ad5914_5) and finished it by 2022/03/20 (Session answer_e9ad5914_6).\n\nLet me calculate the weeks:\n\n- **The Nightingale**: 2022/01/01 to 2022/01/15 = 2 weeks\n- **Sapiens**: 2022/01/15 to 2022/03/06 = approximately 7 weeks\n- **The Power**: 2022/03/06 to 2022/03/20 = 2 weeks\n\n**Total: approximately 11 weeks**",
+    "autoeval_label": false
+}
+ 66%|██████▌   | 33/50 [00:33<00:08,  2.12it/s]{
+    "question": "What is the order of the six museums I visited from earliest to latest?",
+    "answer": "Science Museum, Museum of Contemporary Art, Metropolitan Museum of Art, Museum of History, Modern Art Museum, Natural History Museum",
+    "hypothesis": "Based on our conversation history, I can identify the museums you mentioned visiting:\n\n1. **Science Museum** - \"Space Exploration\" exhibition (Session 1, 2023/01/15)\n2. **Museum of Contemporary Art** - Lecture series by Dr. Maria Rodriguez on feminist art (Session 1, 2023/01/15)\n3. **Metropolitan Museum of Art** - \"Ancient Egyptian Artifacts\" exhibition, saw the golden mask of Pharaoh Tutankhamun (Session 3, 2023/02/10)\n4. **Museum of History** - Behind-the-scenes tour of conservation lab (Session 4, 2023/02/15)\n5. **Modern Art Museum** - Guided tour of \"The Evolution of Abstract Expressionism\" by Dr. Patel (Session 5, 2023/02/20)\n6. **Natural History Museum** - \"Dinosaur Fossils\" exhibition with your niece (Session 6, 2023/03/04)\n\nSo the order from earliest to latest is:\n1. Science Museum (January 15)\n2. Museum of Contemporary Art (January 15)\n3. Metropolitan Museum of Art (February 10)\n4. Museum of History (February 15)\n5. Modern Art Museum (February 20)\n6. Natural History Museum (March 4)",
+    "autoeval_label": true
+}
+ 68%|██████▊   | 34/50 [00:34<00:08,  1.83it/s]{
+    "question": "Which mode of transport did I use most recently, a bus or a train?",
+    "answer": "train",
+    "hypothesis": "Based on the conversation history provided, the most recent mode of transport you mentioned using was a **train**. \n\nIn the most recent session (March 3rd, 2023), you mentioned: \"I took a train ride to visit my family in the countryside just recently, on March 3rd, and it was a nice 2-hour journey.\"\n\nWhile you mentioned taking buses in an earlier session (February 27th), the train trip on March 3rd is more recent.",
+    "autoeval_label": true
+}
+ 70%|███████   | 35/50 [00:35<00:09,  1.59it/s]{
+    "question": "How many days ago did I attend a networking event?",
+    "answer": "26 days. 27 days (including the last day) is also acceptable.",
+    "hypothesis": "Based on the conversation history, you attended a networking event on 2022/03/09 (Wed) at 6 PM to 8 PM.\n\nToday's date is 2022/04/04 (Mon).\n\nThat means you attended the networking event **26 days ago**.",
+    "autoeval_label": true
+}
+ 72%|███████▏  | 36/50 [00:35<00:08,  1.61it/s]{
+    "question": "Which event did I participate in first, the charity gala or the charity bake sale?",
+    "answer": "I participated in the charity bake sale first.",
+    "hypothesis": "Based on the conversation history, you participated in the **charity bake sale first**. \n\nThe charity bake sale is discussed in Session answer_5850de18_2 from March 15, 2023, where you were organizing it and looking for healthy snack ideas.\n\nThe charity gala is mentioned later in Session answer_5850de18_1 from March 28, 2023, where you mentioned attending a charity gala \"tonight\" (on that date).\n\nSo the bake sale came before the gala.",
+    "autoeval_label": true
+}
+ 74%|███████▍  | 37/50 [00:36<00:08,  1.59it/s]{
+    "question": "How many days ago did I participate in the 5K charity run?",
+    "answer": "7 days ago. 8 days (including the last day) is also acceptable.",
+    "hypothesis": "Based on the conversation history, you participated in the 5K charity run on **2023/03/19 (Sun)**, and today's date is **2023/03/26 (Sun)**.\n\nThat means you participated in the 5K charity run **7 days ago**.",
+    "autoeval_label": true
+}
+ 76%|███████▌  | 38/50 [00:37<00:08,  1.47it/s]{
+    "question": "Who did I meet with during the lunch last Tuesday?",
+    "answer": "Emma",
+    "hypothesis": "Based on the conversation history, you met with Emma, a freelance writer, over lunch. You mentioned she's now a potential collaborator for a project you're working on.",
+    "autoeval_label": true
+}
+ 78%|███████▊  | 39/50 [00:37<00:07,  1.51it/s]{
+    "question": "What was the significant buisiness milestone I mentioned four weeks ago?",
+    "answer": "I signed a contract with my first client.",
+    "hypothesis": "Based on the conversation history, four weeks ago from today's date (2023/03/28) would be around late February 2023. \n\nLooking at the first session from 2023/02/10, you mentioned that you \"just launched my website and created a business plan outline\" as significant business milestones.",
+    "autoeval_label": false
+}
+ 80%|████████  | 40/50 [00:38<00:06,  1.57it/s]{
+    "question": "What kitchen appliance did I buy 10 days ago?",
+    "answer": "a smoker",
+    "hypothesis": "Based on the conversation history, 10 days ago from today (2023/03/25) would be 2023/03/15.\n\nLooking at the conversation from 2023/03/15, you mentioned that you \"just got a smoker today.\" So you bought a **smoker** 10 days ago.",
+    "autoeval_label": true
+}
+ 82%|████████▏ | 41/50 [00:38<00:05,  1.61it/s]{
+    "question": "What is the difference in price between my luxury boots and the similar pair found at the budget store?",
+    "answer": "$750",
+    "hypothesis": "Based on the conversation history, you mentioned that you paid $800 for your luxury boots, and you found that similar boots can be found at a budget store for $50.\n\nThe difference in price between your luxury boots and the similar pair found at the budget store is:\n\n$800 - $50 = $750\n\nSo you could have saved $750 by purchasing the budget store version instead of the luxury boots.",
+    "autoeval_label": true
+}
+ 84%|████████▍ | 42/50 [00:39<00:04,  1.88it/s]{
+    "question": "How many plants did I initially plant for tomatoes and cucumbers?",
+    "answer": "8",
+    "hypothesis": "Based on the conversation history, you initially planted:\n\n- **5 tomato plants**\n- **3 cucumber plants**",
+    "autoeval_label": true
+}
+ 86%|████████▌ | 43/50 [00:39<00:03,  1.95it/s]{
+    "question": "How much did I save on the designer handbag at TK Maxx?",
+    "answer": "$300",
+    "hypothesis": "Based on the conversation history, you mentioned getting a designer handbag for $200 from TK Maxx in one conversation. However, in another conversation, you mentioned getting a designer handbag that was originally $500, but you didn't specify the actual price you paid or how much you saved.\n\nSo I have two different pieces of information:\n1. You got a handbag from TK Maxx for $200\n2. You got a designer handbag that was originally $500 (but the purchase price wasn't mentioned)\n\nI don't have enough information to determine exactly how much you saved, as the conversations don't clearly connect these details or specify the savings amount.",
+    "autoeval_label": false
+}
+ 88%|████████▊ | 44/50 [00:40<00:03,  1.85it/s]{
+    "question": "What is the total cost of the car cover and detailing spray I purchased?",
+    "answer": "$140",
+    "hypothesis": "Based on the conversation history, I can see that:\n\n1. You purchased a waterproof car cover for **$120**\n2. You purchased a detailing spray from Amazon for **$20**\n\nTherefore, the total cost of the car cover and detailing spray you purchased is **$140**.",
+    "autoeval_label": true
+}
+ 90%|█████████ | 45/50 [00:41<00:03,  1.47it/s]{
+    "question": "How much did I save on the Jimmy Choo heels?",
+    "answer": "$300",
+    "hypothesis": "Based on the conversation history, you saved $300 on the Jimmy Choo heels. You mentioned that you got them at the outlet mall for $200, and later in the conversation you noted that they originally retailed for $500. So the savings would be $500 - $200 = $300.",
+    "autoeval_label": true
+}
+ 92%|█████████▏| 46/50 [00:41<00:02,  1.65it/s]{
+    "question": "What percentage of leadership positions do women hold in the my company?",
+    "answer": "20%",
+    "hypothesis": "Based on the conversation history, you mentioned in a previous session that you recently attended a workshop on gender equality and learned that **women occupy 20 of the leadership positions** in your company.\n\nHowever, you also mentioned earlier that your company has a **total of 100 leadership positions** across the company.\n\nTherefore, women hold **20% (20 out of 100)** of the leadership positions in your company.",
+    "autoeval_label": true
+}
+ 94%|█████████▍| 47/50 [00:42<00:01,  1.74it/s]{
+    "question": "What is the total amount I spent on gifts for my coworker and brother?",
+    "answer": "$200",
+    "hypothesis": "Based on the conversation history, you spent:\n\n* **$100** on your brother's graduation gift (a gift card to his favorite electronics store)\n* **$100** on your coworker's baby shower gift (a set of baby clothes and toys from Buy Buy Baby)\n\n**Total amount spent on gifts for your coworker and brother: $200**",
+    "autoeval_label": true
+}
+ 96%|█████████▌| 48/50 [00:42<00:00,  2.10it/s]{
+    "question": "How much more money did I raise than my initial goal in the charity cycling event?",
+    "answer": "$50",
+    "hypothesis": "Based on the conversation history, you raised $250 in donations for the charity cycling event, and your initial goal was $200. \n\nTherefore, you raised $250 - $200 = $50 more than your initial goal.",
+    "autoeval_label": true
+}
+ 98%|█████████▊| 49/50 [00:42<00:00,  2.24it/s]{
+    "question": "How many pages do I have left to read in 'Sapiens'?",
+    "answer": "The information provided is not enough. You did not mention how many paged do you have left to read in 'Sapiens'.",
+    "hypothesis": "I don't have information about how many pages you have left to read in 'Sapiens'. \n\nFrom our conversation history, I can see that you mentioned reading \"Sapiens\" at a pace of 10-20 pages per week and that it's been slow going for you, but you never mentioned your current page number or the total page count of the book.\n\nIf you'd like to track your progress in 'Sapiens', feel free to share your current page number and the total page count, and I can help you calculate how many pages you have remaining!",
+    "autoeval_label": true
+}
+100%|██████████| 50/50 [00:43<00:00,  2.30it/s]100%|██████████| 50/50 [00:43<00:00,  1.16it/s]
+Accuracy: 0.9
+	multi-session: 0.8462 (13)
+	single-session-user: 1.0 (7)
+	single-session-assistant: 1.0 (5)
+	single-session-preference: 1.0 (3)
+	knowledge-update: 1.0 (8)
+	temporal-reasoning: 0.7857 (14)
+Saved to runs/20260523T165553Z__rag-dense__oracle__g-session__rag-dense__oracle__smoke/hypotheses.jsonl.eval-results-gpt-4o
+
+=== print_qa_metrics.py ===
+
+Evaluation results by task:
+	single-session-user: 1.0 (7)
+	single-session-preference: 1.0 (3)
+	single-session-assistant: 1.0 (5)
+	multi-session: 0.8462 (13)
+	temporal-reasoning: 0.7857 (14)
+	knowledge-update: 1.0 (8)
+
+Task-averaged Accuracy: 0.9386
+Overall Accuracy: 0.9
+Abstention Accuracy: 1.0 (4)

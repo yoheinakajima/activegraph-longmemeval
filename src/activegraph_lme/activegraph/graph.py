@@ -75,6 +75,15 @@ class Turn:
         # Compatibility with the old Edge-style introspection in stats().
         return "Turn"
 
+    # Scoreable protocol surface (see activegraph/retrieve.py::Scoreable).
+    @property
+    def id(self) -> str:
+        return self.turn_id
+
+    @property
+    def sort_key(self) -> tuple:
+        return (self.session_date, self.session_idx, self.turn_idx)
+
 
 @dataclass(frozen=True)
 class _EdgeView:
