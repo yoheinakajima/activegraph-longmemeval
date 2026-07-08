@@ -122,6 +122,7 @@ class ActiveGraphDetSystem:
         meta = {
             **state.meta,
             "n_selected_turns": len(res.selected_turn_ids),
+            "selected_unit_ids": list(res.selected_unit_ids),
             "n_seeds": res.n_seeds,
             "n_temporal_expansions": res.n_expanded,
             "retrieval_signal": self.retrieval_signal,

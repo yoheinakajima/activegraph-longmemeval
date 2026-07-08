@@ -95,3 +95,19 @@ Expectations:
   default budget; if it's non-zero on a large fraction of questions
   the budget needs to be raised (and reported alongside the new
   comparison baseline).
+
+## ActiveGraph Memory Pack Adapter
+
+`activegraph-memory-pack` is a Phase 1 integration cell for the external
+`activegraph-memory` repository. In v0.1 it should be treated as
+instrumentation over the deterministic lexical context, not as an expected
+accuracy improvement. Its first sanity check is mechanical:
+
+- `make tests` should report the adapter contract as `OK` when
+  `activegraph-memory` is installed or available as a sibling checkout.
+- The adapter should emit `retrieval_plan`, `coverage_report`,
+  `confidence`, and `gateway_request` metadata while keeping the reader
+  context deterministic.
+- Accuracy lift should only be interpreted after future pack versions alter
+  retrieval/assembly through claims, temporal refs, supersession, or
+  evidence bundles.

@@ -1,4 +1,5 @@
 from .activegraph_det import ActiveGraphDetSystem
+from .activegraph_memory_pack import ActiveGraphMemoryPackSystem
 from .activegraph_sem_extract import ActiveGraphSemExtractSystem
 from .activegraph_sem_hybrid import ActiveGraphSemHybridSystem
 from .activegraph_sem_index import ActiveGraphSemIndexSystem
@@ -36,6 +37,13 @@ def build_system(name: str, cfg, *, extract_seed: str = "A-v2") -> System:
             min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
             max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
             embedding_model=cfg.embeddings.model,
+        )
+    if name == "activegraph-memory-pack":
+        return ActiveGraphMemoryPackSystem(
+            token_budget=cfg.activegraph.token_budget,
+            min_token_length=cfg.activegraph.min_token_length,
+            min_session_cooccurrence=cfg.activegraph.min_session_cooccurrence,
+            max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
         )
     if name == "activegraph-sem-extract":
         return ActiveGraphSemExtractSystem(
@@ -76,6 +84,7 @@ __all__ = [
     "RagBM25",
     "RagDense",
     "ActiveGraphDetSystem",
+    "ActiveGraphMemoryPackSystem",
     "ActiveGraphSemExtractSystem",
     "ActiveGraphSemHybridSystem",
     "ActiveGraphSemIndexSystem",

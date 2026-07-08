@@ -49,6 +49,7 @@ systems:
   - rag-dense
   - activegraph-det-lexical
   - activegraph-det-embedding
+  - activegraph-memory-pack
 
 datasets:
   oracle: data/longmemeval_oracle.json

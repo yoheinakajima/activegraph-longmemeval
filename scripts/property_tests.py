@@ -13,6 +13,10 @@ Asserts:
       - 1-hop temporal expansion pulls in the paired turn from the same session
   * activegraph-det-embedding:
       - skipped when OPENAI_API_KEY is missing (recorded as a skip, not a pass)
+  * activegraph-memory-pack:
+      - imports the external activegraph-memory package when available
+      - preserves deterministic conversation context
+      - emits retrieval_plan, coverage_report, confidence, and gateway_request metadata
 
 Exits non-zero on any failure. Intended as a CI/PR gate.
 """
@@ -33,6 +37,7 @@ from activegraph_lme.config import load_config
 from activegraph_lme.data import LMEInstance
 from activegraph_lme.systems import build_system
 from activegraph_lme.systems.activegraph_det import ActiveGraphDetSystem
+from activegraph_lme.systems.activegraph_memory_pack import activegraph_memory_available
 
 
 PASS = "OK"
@@ -288,6 +293,40 @@ def _ag_embedding_skip_or_smoke(cfg) -> tuple[str, str]:
             f"has_evidence={has_evidence})")
 
 
+def _activegraph_memory_pack_contract(cfg) -> tuple[str, str]:
+    available, reason = activegraph_memory_available()
+    if not available:
+        return (SKIP, f"activegraph-memory-pack skipped ({reason})")
+
+    inst = _make_instance_for_activegraph()
+    sysobj = build_system("activegraph-memory-pack", cfg)
+    st = sysobj.ingest(inst)
+    question = "What is the Mochi kitten name?"
+    a = sysobj.retrieve(st, question, inst.question_date)
+    b = sysobj.retrieve(st, question, inst.question_date)
+
+    meta = a.meta or {}
+    plan = meta.get("retrieval_plan") or {}
+    coverage = meta.get("coverage_report") or {}
+    gateway = meta.get("gateway_request") or {}
+    confidence = meta.get("confidence") or {}
+
+    context_ok = a.text == b.text and "Mochi" in a.text
+    plan_ok = plan.get("metadata", {}).get("query_type") == "lookup"
+    coverage_ok = coverage.get("query_id") == plan.get("query_id")
+    gateway_ok = gateway.get("metadata", {}).get("query_id") == plan.get("query_id")
+    confidence_ok = "coverage" in confidence and "extraction" in confidence
+    phase_ok = "activegraph-memory" in (meta.get("phase1_contract") or "")
+
+    ok = all([context_ok, plan_ok, coverage_ok, gateway_ok, confidence_ok, phase_ok])
+    return (
+        PASS if ok else FAIL,
+        "activegraph-memory-pack deterministic Phase 1 contract "
+        f"(context={context_ok}, plan={plan_ok}, coverage={coverage_ok}, "
+        f"gateway={gateway_ok}, confidence={confidence_ok})",
+    )
+
+
 # ---- compiled semantic-memory assembly tests (offline, injected scores) -----
 
 
@@ -532,6 +571,7 @@ def main() -> int:
     results.append(_ag_lexical_finds_evidence(cfg))
     results.append(_ag_temporal_expansion(cfg))
     results.append(_ag_embedding_skip_or_smoke(cfg))
+    results.append(_activegraph_memory_pack_contract(cfg))
 
     # Compiled semantic-memory assembly (offline, injected scores — no API).
     results.append(_sem_hybrid_assembly(cfg))

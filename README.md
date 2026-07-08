@@ -30,7 +30,7 @@ The judge (GPT-4o-as-judge) is also nondeterministic at the margin; we
 pin it to a dated snapshot and run at temperature 0 to keep contribution
 to ~±1 pt.
 
-## Six systems behind one interface
+## Seven systems behind one interface
 
 1. `full-context-oracle` — feed only the evidence sessions (upper bound).
 2. `full-context-s` — stuff the entire history; truncates oldest-first if
@@ -46,8 +46,15 @@ to ~±1 pt.
    relevance is cosine similarity against the pinned `text-embedding-3-small`
    model. Still NO LLM extraction at ingest; fully reproducible given the
    pinned embedding model.
+7. `activegraph-memory-pack` — adapter for the external
+   [`activegraph-memory`](https://github.com/yoheinakajima/activegraph-memory)
+   pack. In v0.1 it keeps the reader context as conversation history only,
+   while recording the pack's deterministic `memory_query -> retrieval_plan`,
+   coverage report, confidence vector, and `memory_gateway` request shape in
+   run metadata. Treat this as the Phase 1 integration/instrumentation cell,
+   not a semantic-memory improvement claim yet.
 
-All six share the prompt template and reader settings. Token counts
+All systems share the prompt template and reader settings. Token counts
 (authoritative, from API `usage`) are logged for every query. The
 ActiveGraph variants additionally guarantee **re-ingest equality**:
 building the graph twice from the same instance produces a byte-identical
@@ -63,6 +70,26 @@ make data             # download datasets, write/verify data/CHECKSUMS.sha256
 make smoke-ids        # build & commit config/smoke_ids.txt (one-time)
 ```
 
+For the `activegraph-memory-pack` system, install or place the external
+pack as a sibling checkout:
+
+```bash
+cd ..
+git clone git@github.com:yoheinakajima/activegraph-memory.git activegraph-memory
+cd activegraph-longmemeval
+uv pip install -e ../activegraph-memory
+```
+
+If you are not using `uv`, install both repos into the same Python
+environment:
+
+```bash
+python3.11 -m pip install -e ../activegraph-memory
+```
+
+If the package is not importable, `make tests` records the pack-adapter
+check as an explicit skip and the normal benchmark systems still run.
+
 `make data` writes `data/CHECKSUMS.sha256` on first run; commit it.
 Subsequent runs verify and fail loudly on mismatch.
 
@@ -73,7 +100,8 @@ Subsequent runs verify and fail loudly on mismatch.
 make run SYSTEM=rag-bm25 DATA=s            # writes runs/<run_id>/
 make eval RUN=runs/<run_id>                # invokes the frozen upstream judge
 
-# offline property tests for the baselines and ActiveGraph Mode A lexical
+# offline property tests for baselines, ActiveGraph Mode A, and the
+# activegraph-memory-pack Phase 1 adapter when the package is installed
 # (no API required; embedding sub-variant skips without OPENAI_API_KEY).
 make tests
 
@@ -83,7 +111,7 @@ make check-resolved-model
 # four baselines only (skip the ActiveGraph variants), smoke-50, RAG × {turn, session}
 make baselines-smoke   # needs ANTHROPIC_API_KEY + OPENAI_API_KEY
 
-# full 6-system matrix (4 baselines + 2 ActiveGraph variants)
+# full system matrix (4 baselines + ActiveGraph variants + activegraph-memory-pack)
 make reproduce         # smoke = 50 frozen IDs from config/smoke_ids.txt
 make reproduce-full    # every question in each dataset
 ```
@@ -99,6 +127,31 @@ is regenerated with accuracy + mean tokens/query per cell.
 `paper/BASELINE_SANITY.md` lists the expected qualitative orderings
 across baselines; check it after every matrix run to catch silently
 broken systems before ActiveGraph enters.
+
+### Testing `activegraph-memory`
+
+Use this ladder before spending on a full run:
+
+```bash
+# 1. Offline adapter contract
+make tests
+
+# 2. One smoke benchmark cell, after data is present
+make run SYSTEM=activegraph-memory-pack DATA=s
+
+# 3. Frozen 50-question matrix, after the adapter contract is green
+make reproduce
+
+# 4. Full 500 only if the 50-question run shows a reason to spend
+make reproduce-full
+```
+
+The v0.1 pack adapter is expected to match the deterministic lexical
+conversation context. The metrics to inspect first are metadata health
+and answer-in-context sidecars, especially temporal and multi-session
+questions. Accuracy lift should not be claimed until later pack behavior
+actually changes retrieval or assembly with claims, supersession, temporal
+refs, or evidence bundles.
 
 ## Reproducibility hooks
 
@@ -131,7 +184,7 @@ config/smoke_ids.txt        # frozen 50-question subset (committed)
 data/CHECKSUMS.sha256       # frozen dataset checksums (committed; files gitignored)
 src/activegraph_lme/        # harness
   reader/                   # tool-free Anthropic reader
-  systems/                  # six system implementations behind a common interface
+  systems/                  # system implementations behind a common interface
   activegraph/              # deterministic graph build + retrieval signals (Mode A)
   eval/run_judge.py         # wrapper around vendored evaluate_qa.py + print_qa_metrics.py
 third_party/longmemeval/    # submodule, pinned commit
@@ -158,3 +211,23 @@ that `ingest()` is byte-identical when re-run on the same instance with
 the same config (the re-ingest-equality property). Mode B
 (LLM-extraction sub-variant) is gated on Mode A clearing the comparison
 bar against the existing baselines.
+
+## ActiveGraph Memory Pack Adapter
+
+`src/activegraph_lme/systems/activegraph_memory_pack.py` is the benchmark
+entry point for the external `activegraph-memory` repository. It imports
+the installed package, or falls back to a sibling checkout named
+`activegraph-memory`.
+
+The adapter currently:
+
+- builds the existing deterministic ActiveGraph lexical state;
+- creates an `activegraph_memory.object_types.MemoryQuery`;
+- calls `activegraph_memory.planner.plan_query`;
+- records a `coverage_report`, confidence vector, and gateway-compatible
+  retrieval request in `AssembledContext.meta`;
+- leaves `AssembledContext.text` as conversation history only.
+
+This keeps the published evaluation boundary clean while giving the new
+pack a stable LongMemEval integration point for future semantic-memory
+behavior.
