@@ -1,0 +1,41 @@
+reader:
+  backend: anthropic
+  model: claude-sonnet-4-5
+  temperature: 0.0
+  max_tokens: 1024
+
+judge:
+  short_name: gpt-4o
+  resolved_model: gpt-4o-2024-08-06
+  temperature: 0.0
+
+embeddings:
+  backend: openai
+  model: text-embedding-3-small
+
+retrieval:
+  granularity: session
+  top_k: 10
+
+full_context_s:
+  token_budget: 180000
+  truncation: oldest_first
+
+activegraph:
+  # ActiveGraph memory evidence budget for the hardened memory-pack run.
+  # The default config keeps 2500 for baseline comparability; this config
+  # exercises the larger memory context requested for the upgraded pack.
+  token_budget: 10000
+  min_token_length: 4
+  min_session_cooccurrence: 2
+  max_doc_freq_fraction: 0.5
+
+systems:
+  - activegraph-memory-pack
+
+datasets:
+  oracle: data/longmemeval_oracle.json
+  s: data/longmemeval_s_cleaned.json
+
+seed: 42
+output_dir: runs
