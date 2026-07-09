@@ -23,14 +23,20 @@ from __future__ import annotations
 import math
 import os
 import re
+import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 
+from ..embedding_cache import PersistentEmbeddingCache, default_embedding_cache_path
 from ..tokens import count_tokens as _tok_count
 from .graph import IngestState, Turn
 from .stoplist import STOPLIST
+
+
+log = logging.getLogger(__name__)
 
 
 @runtime_checkable
@@ -192,6 +198,18 @@ def score_lexical(state: IngestState, question: str, min_token_length: int) -> d
 
 
 _EMBED_MAX_TOKENS = 8000  # safety margin under text-embedding-3-small's 8192 hard limit
+_DEFAULT_EMBED_BATCH_SIZE = 256
+
+
+def _embedding_batch_size() -> int:
+    raw = os.environ.get("AGLME_EMBED_BATCH_SIZE")
+    if raw is None:
+        return _DEFAULT_EMBED_BATCH_SIZE
+    try:
+        return max(1, min(2048, int(raw)))
+    except ValueError:
+        log.warning("Ignoring invalid AGLME_EMBED_BATCH_SIZE=%r", raw)
+        return _DEFAULT_EMBED_BATCH_SIZE
 
 
 def truncate_for_embedding(text: str) -> str:
@@ -231,14 +249,35 @@ def truncate_for_embedding(text: str) -> str:
 @dataclass
 class EmbeddingClient:
     model: str
+    persistent_cache_path: str | Path | None = None
     _client: Any | None = None
     # Content-addressed cache so re-embedding the same text is byte-identical
     # for the harness's repeat-call determinism check.
-    _cache: dict[str, np.ndarray] = None  # type: ignore[assignment]
+    _cache: dict[str, np.ndarray] = field(default_factory=dict)
+    _persistent_cache: PersistentEmbeddingCache | None = field(
+        default=None, init=False, repr=False
+    )
+    _stats: dict[str, int] = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
-        if self._cache is None:
-            self._cache = {}
+        self._stats = {
+            "requests": 0,
+            "memory_hits": 0,
+            "persistent_hits": 0,
+            "misses": 0,
+            "api_batches": 0,
+            "api_texts": 0,
+        }
+        cache_path: str | Path | None
+        if self.persistent_cache_path is None:
+            cache_path = default_embedding_cache_path()
+        else:
+            cache_path = self.persistent_cache_path
+        if cache_path:
+            try:
+                self._persistent_cache = PersistentEmbeddingCache(cache_path)
+            except Exception as e:  # noqa: BLE001
+                log.warning("Persistent embedding cache disabled: %s", e)
 
     def _ensure(self) -> Any:
         if self._client is None:
@@ -247,28 +286,69 @@ class EmbeddingClient:
             self._client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
         return self._client
 
+    def _mem_key(self, canonical_text: str) -> str:
+        return f"{self.model}\0{canonical_text}"
+
+    def cache_stats(self) -> dict[str, Any]:
+        out: dict[str, Any] = dict(self._stats)
+        if self._persistent_cache is not None:
+            out["persistent"] = self._persistent_cache.to_manifest()
+        else:
+            out["persistent"] = None
+        return out
+
     def embed(self, texts: list[str]) -> np.ndarray:
         if not texts:
             return np.zeros((0, 1536), dtype=np.float32)
-        to_fetch: list[tuple[int, str]] = []
+        vectors: list[np.ndarray | None] = [None] * len(texts)
+        to_fetch: list[tuple[int, str, str]] = []
         for i, t in enumerate(texts):
-            if t not in self._cache:
-                to_fetch.append((i, t))
+            self._stats["requests"] += 1
+            canonical = truncate_for_embedding(t)
+            mem_key = self._mem_key(canonical)
+            cached = self._cache.get(mem_key)
+            if cached is not None:
+                self._stats["memory_hits"] += 1
+                vectors[i] = cached
+                continue
+            if self._persistent_cache is not None:
+                cached = self._persistent_cache.get(self.model, canonical)
+                if cached is not None:
+                    self._stats["persistent_hits"] += 1
+                    self._cache[mem_key] = cached
+                    vectors[i] = cached
+                    continue
+            self._stats["misses"] += 1
+            to_fetch.append((i, canonical, mem_key))
 
         if to_fetch:
             cli = self._ensure()
-            new_texts = [t for _, t in to_fetch]
-            B = 96
+            new_texts = [t for _, t, _ in to_fetch]
+            B = _embedding_batch_size()
             new_vecs: list[np.ndarray] = []
             for i in range(0, len(new_texts), B):
-                _batch = [truncate_for_embedding(t) for t in new_texts[i : i + B]]
+                _batch = new_texts[i : i + B]
                 resp = cli.embeddings.create(model=self.model, input=_batch)
+                self._stats["api_batches"] += 1
+                self._stats["api_texts"] += len(_batch)
                 new_vecs.extend(np.asarray(d.embedding, dtype=np.float32) for d in resp.data)
-            for (_, t), v in zip(to_fetch, new_vecs):
+            for (_, canonical, mem_key), v in zip(to_fetch, new_vecs):
                 n = float(np.linalg.norm(v))
-                self._cache[t] = v / n if n > 0 else v
+                normed = v / n if n > 0 else v
+                self._cache[mem_key] = normed
+                if self._persistent_cache is not None:
+                    self._persistent_cache.put(
+                        self.model,
+                        canonical,
+                        normed,
+                        source="openai.embeddings",
+                    )
+            for i, _, mem_key in to_fetch:
+                vectors[i] = self._cache[mem_key]
 
-        return np.stack([self._cache[t] for t in texts], axis=0)
+        if any(v is None for v in vectors):
+            raise RuntimeError("EmbeddingClient failed to resolve every requested vector")
+        return np.stack([v for v in vectors if v is not None], axis=0)
 
 
 def score_embedding(

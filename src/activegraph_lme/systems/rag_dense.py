@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
-from openai import OpenAI
 
 from ..data import LMEInstance
 from .base import AssembledContext, format_session
@@ -24,32 +22,17 @@ class _State:
     top_k: int
 
 
-_client: OpenAI | None = None
-
-
-def _get_client() -> OpenAI:
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    return _client
+_embedders: dict[str, object] = {}
 
 
 def _embed_batch(model: str, texts: list[str]) -> np.ndarray:
-    if not texts:
-        return np.zeros((0, 1536), dtype=np.float32)
-    # OpenAI batches up to a generous size; we keep it modest for memory.
-    out = []
-    B = 96
-    for i in range(0, len(texts), B):
-        chunk = texts[i : i + B]
-        from activegraph_lme.activegraph.retrieve import truncate_for_embedding
-        chunk = [truncate_for_embedding(t) for t in chunk]
-        resp = _get_client().embeddings.create(model=model, input=chunk)
-        out.extend([np.asarray(d.embedding, dtype=np.float32) for d in resp.data])
-    arr = np.stack(out, axis=0)
-    norms = np.linalg.norm(arr, axis=1, keepdims=True)
-    norms[norms == 0] = 1.0
-    return arr / norms
+    from activegraph_lme.activegraph.retrieve import EmbeddingClient
+
+    embedder = _embedders.get(model)
+    if embedder is None:
+        embedder = EmbeddingClient(model=model)
+        _embedders[model] = embedder
+    return embedder.embed(texts)  # type: ignore[attr-defined]
 
 
 class RagDense:

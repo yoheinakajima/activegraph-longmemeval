@@ -31,6 +31,9 @@ __pycache__/
 # tiktoken's BPE cache, populated on first network-enabled run.
 /.tiktoken_cache/
 
+# Durable local embedding cache used for resumable runs.
+/.embedding_cache/
+
 # ignore data dirs at any depth, not just root. The top-level
 # /data/ is unignored explicitly so individually-whitelisted files
 # under it (CHECKSUMS, the sem_extract_cache committed seed-A) can

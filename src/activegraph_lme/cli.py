@@ -5,8 +5,10 @@ import logging
 import os
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import click
 from dotenv import load_dotenv
@@ -63,6 +65,99 @@ def _filter_smoke(instances: list[LMEInstance], smoke_ids_path: Path) -> list[LM
     return selected
 
 
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+    tmp.replace(path)
+
+
+def _append_run_event(path: Path, event_type: str, payload: dict[str, Any]) -> None:
+    row = {
+        "event_id": str(uuid.uuid4()),
+        "type": event_type,
+        "created_at": _utc_now(),
+        "payload": payload,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+
+
+def _read_query_records(path: Path) -> list[QueryRecord]:
+    if not path.exists():
+        return []
+    records: dict[str, QueryRecord] = {}
+    order: list[str] = []
+    for line_no, line in enumerate(path.read_text().splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+            qid = str(row["question_id"])
+            rec = QueryRecord(**row)
+        except Exception as e:  # noqa: BLE001
+            raise click.ClickException(
+                f"Cannot parse {path}:{line_no} as a QueryRecord: {e}"
+            ) from e
+        if qid not in records:
+            order.append(qid)
+        records[qid] = rec
+    return [records[qid] for qid in order]
+
+
+def _repair_hypotheses_for_resume(
+    hyp_path: Path,
+    completed_records: list[QueryRecord],
+) -> None:
+    if not completed_records:
+        return
+    if not hyp_path.exists():
+        raise click.ClickException(
+            f"Cannot resume: {hyp_path} is missing but query_records.jsonl has "
+            f"{len(completed_records)} completed records."
+        )
+    by_qid: dict[str, dict[str, Any]] = {}
+    for line_no, line in enumerate(hyp_path.read_text().splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+            qid = str(row["question_id"])
+        except Exception as e:  # noqa: BLE001
+            raise click.ClickException(
+                f"Cannot parse {hyp_path}:{line_no} while preparing resume: {e}"
+            ) from e
+        by_qid[qid] = row
+
+    missing = [rec.question_id for rec in completed_records if rec.question_id not in by_qid]
+    if missing:
+        raise click.ClickException(
+            "Cannot resume: completed query_records are missing hypotheses for "
+            f"{missing[:5]} ({len(missing)} total)."
+        )
+
+    tmp = hyp_path.with_suffix(hyp_path.suffix + ".resume.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        for rec in completed_records:
+            f.write(json.dumps(by_qid[rec.question_id], ensure_ascii=False) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+    tmp.replace(hyp_path)
+
+
+def _embedding_cache_manifest(system: Any) -> dict[str, Any]:
+    embedder = getattr(system, "_embedder", None)
+    if embedder is None or not hasattr(embedder, "cache_stats"):
+        return {}
+    return embedder.cache_stats()
+
+
 @click.group()
 def main() -> None:
     """activegraph-longmemeval harness."""
@@ -76,6 +171,14 @@ def main() -> None:
 @click.option("--smoke", is_flag=True, help="Use the frozen 50-question subset.")
 @click.option("--limit", type=int, default=None, help="Cap to first N (debug only).")
 @click.option("--run-id", type=str, default=None, help="Override run id (default: timestamp).")
+@click.option(
+    "--resume",
+    is_flag=True,
+    help=(
+        "Resume an existing run directory by skipping question_ids already "
+        "present in query_records.jsonl."
+    ),
+)
 @click.option(
     "--require-authoritative-tokens/--allow-charfallback",
     "require_auth_tokens",
@@ -106,6 +209,7 @@ def run_cmd(
     smoke: bool,
     limit: int | None,
     run_id: str | None,
+    resume: bool,
     require_auth_tokens: bool | None,
     extract_seed: str,
 ) -> None:
@@ -150,7 +254,58 @@ def run_cmd(
     rid = run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     tag = "smoke" if smoke else "full"
     run_dir = Path(cfg.output_dir) / f"{rid}__{system_name}__{dataset_key}__{tag}"
+    run_dir_existed = run_dir.exists()
     run_dir.mkdir(parents=True, exist_ok=True)
+    hyp_path = run_dir / "hypotheses.jsonl"
+    query_records_path = run_dir / "query_records.jsonl"
+    event_path = run_dir / "run_events.jsonl"
+    state_path = run_dir / "run_state.json"
+    partial_manifest_path = run_dir / "manifest.partial.json"
+    final_manifest_path = run_dir / "manifest.json"
+
+    artifacts = [hyp_path, query_records_path, final_manifest_path, partial_manifest_path]
+    if not resume and any(p.exists() for p in artifacts):
+        raise click.ClickException(
+            f"Run directory already contains artifacts: {run_dir}. "
+            "Pass --resume to continue it or choose a new --run-id."
+        )
+
+    resume_state: dict[str, Any] = {}
+    if resume and state_path.exists():
+        resume_state = json.loads(state_path.read_text())
+    elif resume:
+        prior_manifest_path = (
+            partial_manifest_path
+            if partial_manifest_path.exists()
+            else final_manifest_path
+            if final_manifest_path.exists()
+            else None
+        )
+        if prior_manifest_path is not None:
+            prior = json.loads(prior_manifest_path.read_text())
+            resume_state = {
+                "started_at": prior.get("started_at"),
+                "reader_model_resolved": prior.get("reader_model_resolved"),
+                "accumulated_wall_clock_s": prior.get("wall_clock_s", 0.0),
+                "embedding_cache": prior.get("embedding_cache", {}),
+            }
+
+    completed_records = _read_query_records(query_records_path) if resume else []
+    instance_ids = [inst.question_id for inst in instances]
+    unknown_completed = sorted({r.question_id for r in completed_records} - set(instance_ids))
+    if unknown_completed:
+        raise click.ClickException(
+            "Cannot resume: query_records.jsonl contains question_ids outside "
+            f"this run selection: {unknown_completed[:5]} ({len(unknown_completed)} total)."
+        )
+    completed_by_id = {r.question_id: r for r in completed_records}
+    completed_records = [completed_by_id[qid] for qid in instance_ids if qid in completed_by_id]
+    completed_ids = set(completed_by_id)
+    if resume:
+        _repair_hypotheses_for_resume(hyp_path, completed_records)
+
+    started_at = str(resume_state.get("started_at") or _utc_now())
+    previous_wall_clock_s = float(resume_state.get("accumulated_wall_clock_s") or 0.0)
 
     manifest = Manifest(
         run_id=run_dir.name,
@@ -165,11 +320,15 @@ def run_cmd(
         judge_short_name=cfg.judge.short_name,
         judge_resolved_model=cfg.judge.resolved_model,
         seed=cfg.seed,
-        started_at=datetime.now(timezone.utc).isoformat(),
+        started_at=started_at,
         n_questions=len(instances),
         context_token_source=ctx_src,
         require_authoritative_tokens=require_auth_tokens,
     )
+    manifest.reader_model_resolved = str(resume_state.get("reader_model_resolved") or "")
+    manifest.embedding_cache = dict(resume_state.get("embedding_cache") or {})
+    manifest.queries = list(completed_records)
+    manifest.n_truncated = sum(1 for q in manifest.queries if q.truncated)
     if system_name.startswith("activegraph-det-"):
         signal = system_name.removeprefix("activegraph-det-")
         manifest.notes.append(
@@ -177,39 +336,82 @@ def run_cmd(
             f"No LLM extraction at ingest. Token budget mirrors the turn-level "
             f"RAG baselines so accuracy comparisons aren't confounded by context size."
         )
+    if resume:
+        manifest.notes.append(
+            f"Resumable run: loaded {len(completed_records)} completed query records "
+            f"from {query_records_path.name}."
+        )
 
-    hyp_path = run_dir / "hypotheses.jsonl"
+    if not run_dir_existed or not resume:
+        _append_run_event(
+            event_path,
+            "run.started",
+            {
+                "run_id": run_dir.name,
+                "system": system_name,
+                "dataset": dataset_key,
+                "n_questions": len(instances),
+            },
+        )
+    else:
+        _append_run_event(
+            event_path,
+            "run.resumed",
+            {
+                "run_id": run_dir.name,
+                "system": system_name,
+                "dataset": dataset_key,
+                "completed_questions": len(completed_records),
+                "remaining_questions": len(instances) - len(completed_records),
+            },
+        )
+
+    remaining = [inst for inst in instances if inst.question_id not in completed_ids]
     t0 = time.monotonic()
-    with open(hyp_path, "w") as hyp_f:
-        for idx, inst in enumerate(tqdm(instances, desc=f"{system_name}:{dataset_key}")):
-            t_inst = time.monotonic()
-            state = system.ingest(inst)
-            ctx = system.retrieve(state, inst.question, inst.question_date)
+    try:
+        with open(hyp_path, "a" if resume else "w", encoding="utf-8") as hyp_f, open(
+            query_records_path, "a" if resume else "w", encoding="utf-8"
+        ) as qrec_f:
+            for idx, inst in enumerate(
+                tqdm(remaining, desc=f"{system_name}:{dataset_key}")
+            ):
+                _append_run_event(
+                    event_path,
+                    "query.started",
+                    {
+                        "question_id": inst.question_id,
+                        "question_type": inst.question_type,
+                        "remaining_index": idx,
+                        "completed_before_query": len(manifest.queries),
+                    },
+                )
+                t_inst = time.monotonic()
+                state = system.ingest(inst)
+                ctx = system.retrieve(state, inst.question, inst.question_date)
 
-            # Determinism check, once per system per run.
-            if idx == 0:
-                ctx2 = system.retrieve(state, inst.question, inst.question_date)
-                if ctx.text != ctx2.text:
+                # Determinism check, once per process invocation.
+                if idx == 0:
+                    ctx2 = system.retrieve(state, inst.question, inst.question_date)
+                    if ctx.text != ctx2.text:
+                        raise RuntimeError(
+                            f"System {system_name}.retrieve() is non-deterministic "
+                            f"under fixed state — refusing to record run."
+                        )
+
+                user = format_user(ctx.text, inst.question, inst.question_date)
+                out = reader.generate(SYSTEM_PROMPT, user)
+
+                # Pin the resolved reader model on the first successful call.
+                if not manifest.reader_model_resolved:
+                    manifest.reader_model_resolved = out.resolved_model
+                elif manifest.reader_model_resolved != out.resolved_model:
                     raise RuntimeError(
-                        f"System {system_name}.retrieve() is non-deterministic "
-                        f"under fixed state — refusing to record run."
+                        "Reader resolved model changed mid-run "
+                        f"({manifest.reader_model_resolved!r} -> {out.resolved_model!r}); "
+                        f"refusing to record run with ambiguous provenance."
                     )
 
-            user = format_user(ctx.text, inst.question, inst.question_date)
-            out = reader.generate(SYSTEM_PROMPT, user)
-
-            # Pin the resolved reader model on the first successful call.
-            if not manifest.reader_model_resolved:
-                manifest.reader_model_resolved = out.resolved_model
-            elif manifest.reader_model_resolved != out.resolved_model:
-                raise RuntimeError(
-                    "Reader resolved model changed mid-run "
-                    f"({manifest.reader_model_resolved!r} → {out.resolved_model!r}); "
-                    f"refusing to record run with ambiguous provenance."
-                )
-
-            manifest.queries.append(
-                QueryRecord(
+                record = QueryRecord(
                     question_id=inst.question_id,
                     question_type=inst.question_type,
                     context_tokens=_tok_count(ctx.text),
@@ -218,23 +420,112 @@ def run_cmd(
                     truncated=ctx.truncated,
                     elapsed_s=round(time.monotonic() - t_inst, 4),
                 )
-            )
-            if ctx.truncated:
-                manifest.n_truncated += 1
-
-            hyp_f.write(
-                json.dumps(
-                    {"question_id": inst.question_id, "hypothesis": out.text},
-                    ensure_ascii=False,
+                hyp_f.write(
+                    json.dumps(
+                        {"question_id": inst.question_id, "hypothesis": out.text},
+                        ensure_ascii=False,
+                    )
+                    + "\n"
                 )
-                + "\n"
-            )
+                hyp_f.flush()
+                os.fsync(hyp_f.fileno())
 
-            hyp_f.flush()
+                qrec_f.write(json.dumps(record.__dict__, ensure_ascii=False) + "\n")
+                qrec_f.flush()
+                os.fsync(qrec_f.fileno())
 
-    manifest.finished_at = datetime.now(timezone.utc).isoformat()
-    manifest.wall_clock_s = round(time.monotonic() - t0, 3)
-    manifest.write(run_dir / "manifest.json")
+                manifest.queries.append(record)
+                if ctx.truncated:
+                    manifest.n_truncated += 1
+                manifest.embedding_cache = (
+                    _embedding_cache_manifest(system) or manifest.embedding_cache
+                )
+                manifest.wall_clock_s = round(
+                    previous_wall_clock_s + (time.monotonic() - t0), 3
+                )
+                state_payload = {
+                    "run_id": run_dir.name,
+                    "started_at": manifest.started_at,
+                    "updated_at": _utc_now(),
+                    "reader_model_resolved": manifest.reader_model_resolved,
+                    "accumulated_wall_clock_s": manifest.wall_clock_s,
+                    "completed_question_ids": [q.question_id for q in manifest.queries],
+                    "n_completed": len(manifest.queries),
+                    "n_questions": len(instances),
+                    "query_records_path": str(query_records_path),
+                    "hypotheses_path": str(hyp_path),
+                    "partial_manifest_path": str(partial_manifest_path),
+                    "embedding_cache": manifest.embedding_cache,
+                }
+                _atomic_write_json(state_path, state_payload)
+                manifest.write(partial_manifest_path)
+                _append_run_event(
+                    event_path,
+                    "query.completed",
+                    {
+                        "question_id": inst.question_id,
+                        "question_type": inst.question_type,
+                        "completed_questions": len(manifest.queries),
+                        "n_questions": len(instances),
+                        "elapsed_s": record.elapsed_s,
+                    },
+                )
+    except Exception as e:
+        manifest.embedding_cache = _embedding_cache_manifest(system) or manifest.embedding_cache
+        manifest.wall_clock_s = round(previous_wall_clock_s + (time.monotonic() - t0), 3)
+        manifest.write(partial_manifest_path)
+        _append_run_event(
+            event_path,
+            "run.failed",
+            {
+                "run_id": run_dir.name,
+                "error_type": e.__class__.__name__,
+                "error": str(e),
+                "completed_questions": len(manifest.queries),
+                "n_questions": len(instances),
+            },
+        )
+        raise
+
+    if not manifest.reader_model_resolved:
+        raise click.ClickException(
+            "Run has no resolved reader model. This can only happen if all "
+            "questions were marked completed before the resumable state file "
+            "recorded reader_model_resolved."
+        )
+
+    manifest.finished_at = _utc_now()
+    manifest.wall_clock_s = round(previous_wall_clock_s + (time.monotonic() - t0), 3)
+    manifest.embedding_cache = _embedding_cache_manifest(system) or manifest.embedding_cache
+    manifest.write(final_manifest_path)
+    _atomic_write_json(
+        state_path,
+        {
+            "run_id": run_dir.name,
+            "started_at": manifest.started_at,
+            "finished_at": manifest.finished_at,
+            "updated_at": _utc_now(),
+            "reader_model_resolved": manifest.reader_model_resolved,
+            "accumulated_wall_clock_s": manifest.wall_clock_s,
+            "completed_question_ids": [q.question_id for q in manifest.queries],
+            "n_completed": len(manifest.queries),
+            "n_questions": len(instances),
+            "query_records_path": str(query_records_path),
+            "hypotheses_path": str(hyp_path),
+            "manifest_path": str(final_manifest_path),
+            "embedding_cache": manifest.embedding_cache,
+        },
+    )
+    _append_run_event(
+        event_path,
+        "run.completed",
+        {
+            "run_id": run_dir.name,
+            "completed_questions": len(manifest.queries),
+            "n_questions": len(instances),
+            "wall_clock_s": manifest.wall_clock_s,
+        },
+    )
     click.echo(str(run_dir))
 
 

@@ -294,6 +294,42 @@ def _ag_embedding_skip_or_smoke(cfg) -> tuple[str, str]:
             f"has_evidence={has_evidence})")
 
 
+def _persistent_embedding_cache_roundtrip(cfg) -> tuple[str, str]:
+    """Persistent embedding cache survives process-local object lifetimes."""
+    import tempfile
+    import numpy as np
+
+    from activegraph_lme.embedding_cache import PersistentEmbeddingCache
+
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "embeddings.sqlite3"
+        v = np.asarray([0.25, 0.5, 0.75], dtype=np.float32)
+        c = PersistentEmbeddingCache(path)
+        c.put("test-model", "hello world", v, source="property-test")
+        got = c.get("test-model", "hello world")
+        manifest = c.to_manifest()
+        c.close()
+
+        c2 = PersistentEmbeddingCache(path)
+        got2 = c2.get("test-model", "hello world")
+        manifest2 = c2.to_manifest()
+        c2.close()
+
+    ok = (
+        got is not None
+        and got2 is not None
+        and np.allclose(got, v)
+        and np.allclose(got2, v)
+        and manifest["n_embeddings"] == 1
+        and manifest2["n_events"] >= 1
+    )
+    return (
+        PASS if ok else FAIL,
+        "persistent embedding cache round-trip "
+        f"(stored={manifest['n_embeddings']}, events={manifest2['n_events']})",
+    )
+
+
 def _activegraph_memory_pack_contract(cfg) -> tuple[str, str]:
     available, reason = activegraph_memory_available()
     if not available:
@@ -579,6 +615,7 @@ def main() -> int:
     results.append(_ag_lexical_finds_evidence(cfg))
     results.append(_ag_temporal_expansion(cfg))
     results.append(_ag_embedding_skip_or_smoke(cfg))
+    results.append(_persistent_embedding_cache_roundtrip(cfg))
     results.append(_activegraph_memory_pack_contract(cfg))
 
     # Compiled semantic-memory assembly (offline, injected scores — no API).
