@@ -15,8 +15,9 @@ Asserts:
       - skipped when OPENAI_API_KEY is missing (recorded as a skip, not a pass)
   * activegraph-memory-pack:
       - imports the external activegraph-memory package when available
-      - preserves deterministic conversation context
-      - emits retrieval_plan, coverage_report, confidence, and gateway_request metadata
+      - compiles claims over source turns without an API key
+      - emits retrieval_plan, evidence_bundle, coverage_report, confidence,
+        selected evidence ids, and gateway_request metadata
 
 Exits non-zero on any failure. Intended as a CI/PR gate.
 """
@@ -308,22 +309,29 @@ def _activegraph_memory_pack_contract(cfg) -> tuple[str, str]:
     meta = a.meta or {}
     plan = meta.get("retrieval_plan") or {}
     coverage = meta.get("coverage_report") or {}
+    evidence = meta.get("evidence_bundle") or {}
     gateway = meta.get("gateway_request") or {}
     confidence = meta.get("confidence") or {}
 
     context_ok = a.text == b.text and "Mochi" in a.text
     plan_ok = plan.get("metadata", {}).get("query_type") == "lookup"
     coverage_ok = coverage.get("query_id") == plan.get("query_id")
+    evidence_ok = evidence.get("query_id") == plan.get("query_id")
     gateway_ok = gateway.get("metadata", {}).get("query_id") == plan.get("query_id")
     confidence_ok = "coverage" in confidence and "extraction" in confidence
-    phase_ok = "activegraph-memory" in (meta.get("phase1_contract") or "")
+    compiled_ok = (
+        meta.get("memory_runtime") == "activegraph_memory.compiler_retrieval_v1"
+        and bool(meta.get("selected_turn_ids"))
+        and bool(meta.get("selected_claim_ids"))
+    )
 
-    ok = all([context_ok, plan_ok, coverage_ok, gateway_ok, confidence_ok, phase_ok])
+    ok = all([context_ok, plan_ok, coverage_ok, evidence_ok, gateway_ok, confidence_ok, compiled_ok])
     return (
         PASS if ok else FAIL,
-        "activegraph-memory-pack deterministic Phase 1 contract "
+        "activegraph-memory-pack compiled-memory contract "
         f"(context={context_ok}, plan={plan_ok}, coverage={coverage_ok}, "
-        f"gateway={gateway_ok}, confidence={confidence_ok})",
+        f"evidence={evidence_ok}, gateway={gateway_ok}, confidence={confidence_ok}, "
+        f"compiled={compiled_ok})",
     )
 
 

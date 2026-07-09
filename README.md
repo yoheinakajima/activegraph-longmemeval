@@ -146,12 +146,37 @@ make reproduce
 make reproduce-full
 ```
 
-The v0.1 pack adapter is expected to match the deterministic lexical
-conversation context. The metrics to inspect first are metadata health
-and answer-in-context sidecars, especially temporal and multi-session
-questions. Accuracy lift should not be claimed until later pack behavior
-actually changes retrieval or assembly with claims, supersession, temporal
-refs, or evidence bundles.
+The current pack adapter compiles role-aware extracted claims from
+`data/sem_extract_cache/seed-A-v2.jsonl` into the external
+`activegraph-memory` runtime, then retrieves evidence bundles that render
+memory-claim headers directly above their source turns. If the extraction
+cache is missing, offline tests fall back to deterministic turn-derived
+claims rather than calling an extractor.
+
+Latest smoke result for the full compiled-memory adapter:
+
+```text
+runs/agmem-fullarch2-smoke-20260709T014835Z__activegraph-memory-pack__s__smoke
+overall accuracy:       0.94
+task-averaged accuracy: 0.9634
+abstention accuracy:    1.0
+```
+
+Per-type accuracy on that 50-question smoke:
+
+```text
+single-session-user        1.0000
+single-session-preference  1.0000
+single-session-assistant   1.0000
+multi-session              0.9231
+temporal-reasoning         0.8571
+knowledge-update           1.0000
+```
+
+Treat this as a smoke-scoped integration result, not a full-500 claim.
+Before a full run, add persistent embedding caching; the compiled-memory
+adapter is intentionally evidence-rich and replaying embeddings is now the
+runtime bottleneck.
 
 ## Reproducibility hooks
 

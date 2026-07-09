@@ -98,16 +98,26 @@ Expectations:
 
 ## ActiveGraph Memory Pack Adapter
 
-`activegraph-memory-pack` is a Phase 1 integration cell for the external
-`activegraph-memory` repository. In v0.1 it should be treated as
-instrumentation over the deterministic lexical context, not as an expected
-accuracy improvement. Its first sanity check is mechanical:
+`activegraph-memory-pack` is the integration cell for the external
+`activegraph-memory` repository. It now uses the pack's compiled-memory
+runtime rather than lexical instrumentation only:
+
+- LongMemEval sessions are projected as source turns.
+- Role-aware extracted facts from `data/sem_extract_cache/seed-A-v2.jsonl`
+  are compiled into `MemoryClaim` records with source-turn provenance.
+- Retrieval scores claims and raw turns, assembles `EvidenceBundle` context,
+  and renders selected claims directly above their supporting turns.
+- Temporal headers include deterministic normalizations for simple duration
+  and relative-date phrases.
+
+Its first sanity checks are mechanical:
 
 - `make tests` should report the adapter contract as `OK` when
   `activegraph-memory` is installed or available as a sibling checkout.
-- The adapter should emit `retrieval_plan`, `coverage_report`,
-  `confidence`, and `gateway_request` metadata while keeping the reader
-  context deterministic.
-- Accuracy lift should only be interpreted after future pack versions alter
-  retrieval/assembly through claims, temporal refs, supersession, or
-  evidence bundles.
+- The adapter should emit `retrieval_plan`, `evidence_bundle`,
+  `coverage_report`, `confidence`, selected evidence ids, and
+  `gateway_request` metadata while keeping retrieval deterministic.
+- The 2026-07-09 smoke run
+  `agmem-fullarch2-smoke-20260709T014835Z__activegraph-memory-pack__s__smoke`
+  scored 0.94 overall / 0.9634 task-avg. Treat that as smoke-scoped; the
+  full-500 result should wait for persistent embedding caching.
