@@ -48,7 +48,7 @@ to ~±1 pt.
    pinned embedding model.
 7. `activegraph-memory-pack` — adapter for the external
    [`activegraph-memory`](https://github.com/yoheinakajima/activegraph-memory)
-   pack. The v0.3 adapter compiles canonical entities/events, state histories,
+   pack. The v0.4 adapter compiles canonical entities/events, state histories,
    preferences, quantities, temporal refs, and list positions; runs fielded
    embeddings plus graph propagation; executes typed query operators; assesses
    sufficiency/conflicts; and prepends calibrated proof-oriented evidence to
@@ -146,8 +146,8 @@ make reproduce
 python3.11 -m activegraph_lme.cli run \
   --system activegraph-memory-pack \
   --dataset s \
-  --config config/run.activegraph-memory-v2.yaml \
-  --run-id agmem-v2-full-YYYYMMDDTHHMMSSZ \
+  --config config/run.activegraph-memory-v4.yaml \
+  --run-id agmem-v4-full-YYYYMMDDTHHMMSSZ \
   --resume \
   --require-authoritative-tokens
 ```
@@ -155,7 +155,7 @@ python3.11 -m activegraph_lme.cli run \
 The current pack adapter compiles role-aware extracted claims from
 `data/sem_extract_cache/seed-A-v2.jsonl` into the external
 `activegraph-memory` runtime, then retrieves evidence bundles that render
-memory-claim headers directly above their source turns. The v2 config selects
+memory-claim headers directly above their source turns. The v4 config selects
 the `max_quality` profile with a 10,000-token context budget, three targeted
 retrieval rounds, entity/event embeddings, and persistent compiled-vector
 caching. Optional LLM reasoning is not attached in this benchmark cell, so the
@@ -187,21 +187,23 @@ proof-complete rate.
   the five-experiment evidence-quality bundle, the one-smoke/one-full policy,
   offline controls, and v4 benchmark results.
 
-Latest typed v3 run:
+Latest typed v4 run:
 
 ```text
-runs/agmem-v3-full-20260710T071914Z__activegraph-memory-pack__s__full
+runs/agmem-v4-full-20260710T144623Z__activegraph-memory-pack__s__full
 overall accuracy:       0.832
-task-averaged accuracy: 0.8508
+task-averaged accuracy: 0.8525
 abstention accuracy:    0.9667
 ```
 
-The run used `activegraph-memory` 0.3.0 commit `58f235b`, `max_quality`, a
-10,000-token budget, fielded `text-embedding-3-small` retrieval, adaptive
-sufficiency assessment, and calibrated candidate rendering. Exact gold-turn
-recall was 89.79% on non-abstention questions. The fixed reader still missed 57
-questions despite every exact gold turn being present. Optional LLM reasoning
-was not attached, so reasoning-stage cost remained zero.
+The run used `activegraph-memory` 0.4.0 commit `1267846`, `max_quality`, a
+10,000-token budget, fielded `text-embedding-3-small` retrieval, source-coverage
+audits, typed evidence slots, scoped preference polarity, per-operator
+confidence floors, and calibrated candidate rendering. It tied v3 overall;
+exact gold-turn recall was 89.15% on non-abstention questions and the reader
+still missed 55 questions despite every exact gold turn being present. Optional
+LLM reasoning was not attached, so reasoning-stage cost remained zero. See the
+v4 report for the paired result, operator regressions, and recovery analysis.
 
 Previous typed v2 proof run:
 
