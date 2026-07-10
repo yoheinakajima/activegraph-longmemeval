@@ -183,6 +183,9 @@ proof-complete rate.
   the completed 0.3 architecture, 0.98 smoke, 0.832 full-500 result, retrieval
   and reader decomposition, proof/sufficiency calibration, operator diagnostics,
   speed/cost telemetry, and remaining general memory-system gaps.
+- [`ACTIVEGRAPH_MEMORY_V4_REPORT.md`](ACTIVEGRAPH_MEMORY_V4_REPORT.md) records
+  the five-experiment evidence-quality bundle, the one-smoke/one-full policy,
+  offline controls, and v4 benchmark results.
 
 Latest typed v3 run:
 

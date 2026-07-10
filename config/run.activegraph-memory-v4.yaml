@@ -1,0 +1,44 @@
+reader:
+  backend: anthropic
+  model: claude-sonnet-4-5
+  temperature: 0.0
+  max_tokens: 1024
+
+judge:
+  short_name: gpt-4o
+  resolved_model: gpt-4o-2024-08-06
+  temperature: 0.0
+
+embeddings:
+  backend: openai
+  model: text-embedding-3-small
+
+retrieval:
+  granularity: session
+  top_k: 10
+
+full_context_s:
+  token_budget: 180000
+  truncation: oldest_first
+
+activegraph:
+  token_budget: 10000
+  memory_profile: max_quality
+  save_retrieval_artifacts: true
+  # Content-addressed keys include model, field, subject, and text hash. Sharing
+  # the warm cache isolates v4 retrieval semantics from re-embedding cost.
+  memory_embedding_cache: .embedding_cache/activegraph-memory-v2.sqlite3
+  embedding_cost_per_million_tokens: 0.02
+  min_token_length: 4
+  min_session_cooccurrence: 2
+  max_doc_freq_fraction: 0.5
+
+systems:
+  - activegraph-memory-pack
+
+datasets:
+  oracle: data/longmemeval_oracle.json
+  s: data/longmemeval_s_cleaned.json
+
+seed: 42
+output_dir: runs

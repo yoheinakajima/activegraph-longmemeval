@@ -144,6 +144,9 @@ class ActiveGraphMemoryPackSystem:
         self._memory_vector_store: Any = None
         self._memory_vector_store_initialized = False
         self._memory_identity = _activegraph_memory_identity()
+        self._memory_major_version = str(
+            self._memory_identity.get("activegraph_memory_version") or "unknown"
+        ).split(".", 1)[0]
 
     def _get_embedder(self) -> EmbeddingClient:
         if self._embedder is None:
@@ -196,7 +199,7 @@ class ActiveGraphMemoryPackSystem:
             **self._memory_identity,
             "n_memory_claims": len(memory_index.claims),
             "n_memory_turns": len(memory_index.turns),
-            "memory_runtime": "activegraph_memory.profile_runtime_v2",
+            "memory_runtime": f"activegraph_memory.profile_runtime_v{self._memory_major_version}",
             "memory_profile": self.memory_profile,
             "memory_embedding_cache": self.memory_embedding_cache,
             "embedding_cost_per_million_tokens": self.embedding_cost_per_million_tokens,
@@ -267,9 +270,9 @@ class ActiveGraphMemoryPackSystem:
         meta = {
             **state.meta,
             "retrieval_signal": (
-                "compiled-memory-v2+fielded-embedding"
+                f"compiled-memory-v{self._memory_major_version}+fielded-embedding"
                 if embedding_provider is not None
-                else "compiled-memory-v2+lexical"
+                else f"compiled-memory-v{self._memory_major_version}+lexical"
             ),
             "system": self.name,
             "query_type": result.metadata.get("query_type"),
