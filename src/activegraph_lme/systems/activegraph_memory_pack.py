@@ -64,6 +64,17 @@ def activegraph_memory_available() -> tuple[bool, str]:
     return True, ""
 
 
+def _memory_runtime_series(version: str) -> str:
+    """Return the public architecture series for a package version."""
+
+    parts = version.split(".")
+    if len(parts) >= 2 and parts[0] == "0" and parts[1].isdigit():
+        return parts[1]
+    if parts and parts[0].isdigit():
+        return parts[0]
+    return "unknown"
+
+
 def _activegraph_memory_identity() -> dict[str, Any]:
     constants = _load_activegraph_memory_module("activegraph_memory.constants")
     package_dir = Path(constants.__file__).resolve().parent
@@ -144,9 +155,9 @@ class ActiveGraphMemoryPackSystem:
         self._memory_vector_store: Any = None
         self._memory_vector_store_initialized = False
         self._memory_identity = _activegraph_memory_identity()
-        self._memory_major_version = str(
-            self._memory_identity.get("activegraph_memory_version") or "unknown"
-        ).split(".", 1)[0]
+        self._memory_runtime_series = _memory_runtime_series(
+            str(self._memory_identity.get("activegraph_memory_version") or "unknown")
+        )
 
     def _get_embedder(self) -> EmbeddingClient:
         if self._embedder is None:
@@ -199,7 +210,7 @@ class ActiveGraphMemoryPackSystem:
             **self._memory_identity,
             "n_memory_claims": len(memory_index.claims),
             "n_memory_turns": len(memory_index.turns),
-            "memory_runtime": f"activegraph_memory.profile_runtime_v{self._memory_major_version}",
+            "memory_runtime": f"activegraph_memory.profile_runtime_v{self._memory_runtime_series}",
             "memory_profile": self.memory_profile,
             "memory_embedding_cache": self.memory_embedding_cache,
             "embedding_cost_per_million_tokens": self.embedding_cost_per_million_tokens,
@@ -270,9 +281,9 @@ class ActiveGraphMemoryPackSystem:
         meta = {
             **state.meta,
             "retrieval_signal": (
-                f"compiled-memory-v{self._memory_major_version}+fielded-embedding"
+                f"compiled-memory-v{self._memory_runtime_series}+fielded-embedding"
                 if embedding_provider is not None
-                else f"compiled-memory-v{self._memory_major_version}+lexical"
+                else f"compiled-memory-v{self._memory_runtime_series}+lexical"
             ),
             "system": self.name,
             "query_type": result.metadata.get("query_type"),

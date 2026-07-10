@@ -48,7 +48,7 @@ gate, not an estimate of full accuracy.
 
 ```text
 version:      0.4.0
-commit:       1267846176a24e4c11de375015ad4db881c7f47b
+commit:       126784675aa9ffc6573b166a88e02ddd7ad45275
 content hash: sha256:eb11fa0af8ec903ad2706e06b21008184a23f06b9b9a66fb58738b05a4189d0b
 ```
 
@@ -67,4 +67,42 @@ content hash: sha256:eb11fa0af8ec903ad2706e06b21008184a23f06b9b9a66fb58738b05a41
 
 ## LongMemEval Results
 
-Pending the frozen smoke gate.
+### Frozen 50-question smoke
+
+Run: `agmem-v4-smoke-20260710T143235Z__activegraph-memory-pack__s__smoke`
+
+| Metric | v3 smoke | v4 smoke |
+| --- | ---: | ---: |
+| Overall accuracy | 0.9800 | 0.9800 |
+| Task-averaged accuracy | 0.9872 | 0.9872 |
+| Abstention accuracy | 1.0000 | 1.0000 |
+| Exact gold-turn recall, non-abstention | 0.9565 | 0.9565 |
+| Gold-session recall, non-abstention | 0.9783 | 0.9783 |
+| Proof-complete rate | 0.6200 | 0.7800 |
+| Retrieval-sufficient rate | 0.4200 | 0.6000 |
+| Candidate packet rendered | 0.2000 | 0.3800 |
+| Mean retrieval latency, warm cache | 2,838.573 ms | 2,366.699 ms |
+| Mean context tokens | 8,123.92 | 8,119.92 |
+
+The only v4 miss was a multi-session reader failure with all benchmark-marked
+turns in context. The two exact-turn misses were preference questions, but both
+were answered correctly from other evidence in the retrieved sessions. No task
+type collapsed: multi-session was 0.9231 and every other type was 1.0000.
+
+v4 emitted one or more typed evidence slots on 21 of 50 questions, with 2.9
+slots per question overall. Seventeen aggregate or preference queries emitted
+the new source-coverage audit. Mean compiled selection coverage was 0.6306 and
+mean reader-visible coverage was 0.8587; eight audits used bounded raw-source
+recovery, and eight met the complete coverage threshold. Recovery improved the
+reader packet but did not certify an incomplete computed answer.
+
+The smoke cleared every predefined gate, so it authorized one full 500 run.
+The smoke artifacts were generated before correcting a telemetry-only adapter
+label that represented package `0.4.0` as runtime `v0`. The manifest's package
+version, commit, and content hash were correct, retrieval behavior was
+unchanged, and the adapter contract now maps pre-1 package minor versions to
+their public architecture series (`0.4.x` to `v4`) before the full run.
+
+### Full 500
+
+Pending.

@@ -356,7 +356,13 @@ def _activegraph_memory_pack_contract(cfg) -> tuple[str, str]:
     gateway_ok = gateway.get("metadata", {}).get("query_id") == plan.get("query_id")
     confidence_ok = "coverage" in confidence and "extraction" in confidence
     memory_version = str(meta.get("activegraph_memory_version") or "")
-    expected_runtime = f"activegraph_memory.profile_runtime_v{memory_version.split('.', 1)[0]}"
+    version_parts = memory_version.split(".")
+    runtime_series = (
+        version_parts[1]
+        if len(version_parts) >= 2 and version_parts[0] == "0"
+        else version_parts[0]
+    )
+    expected_runtime = f"activegraph_memory.profile_runtime_v{runtime_series}"
     compiled_ok = (
         meta.get("memory_runtime") == expected_runtime
         and bool(memory_version)
