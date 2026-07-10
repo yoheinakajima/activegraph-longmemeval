@@ -61,6 +61,7 @@ class Manifest:
     context_token_source: str = ""        # filled at run start; never empty in a valid run
     require_authoritative_tokens: bool = True
     embedding_cache: dict[str, Any] = field(default_factory=dict)
+    system_identity: dict[str, Any] = field(default_factory=dict)
     queries: list[QueryRecord] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
@@ -88,6 +89,7 @@ class Manifest:
             "context_token_source": self.context_token_source,
             "require_authoritative_tokens": self.require_authoritative_tokens,
             "embedding_cache": self.embedding_cache,
+            "system_identity": self.system_identity,
             "retrieval_summary": self._retrieval_summary(),
             "queries": [q.__dict__ for q in self.queries],
             "notes": self.notes,

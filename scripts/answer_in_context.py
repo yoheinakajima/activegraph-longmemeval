@@ -41,7 +41,9 @@ def _gold_turn_ids(inst: LMEInstance) -> set[str]:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
-    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    # JSON strings may legally contain U+2028/U+2029. ``str.splitlines()``
+    # treats those characters as record separators even though JSONL does not.
+    return [json.loads(line) for line in path.read_text().split("\n") if line.strip()]
 
 
 def _aggregate(rows: list[dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
@@ -97,10 +99,6 @@ def main() -> int:
     judge_name = args.judge_short_name or manifest["judge_short_name"]
 
     sidecar_path = Path(args.sidecar) if args.sidecar else (run_dir / "aic_sidecar.jsonl")
-    if not sidecar_path.exists():
-        raise SystemExit(
-            f"Sidecar not found at {sidecar_path}. Run scripts/aic_sidecar.py first."
-        )
     eval_path = run_dir / f"hypotheses.jsonl.eval-results-{judge_name}"
     if not eval_path.exists():
         raise SystemExit(
@@ -109,7 +107,28 @@ def main() -> int:
         )
 
     instances = {i.question_id: i for i in load_dataset(dataset_path)}
-    sidecar = {r["question_id"]: r for r in _read_jsonl(sidecar_path)}
+    if sidecar_path.exists():
+        sidecar_rows = _read_jsonl(sidecar_path)
+    else:
+        retrieval_path = run_dir / "retrieval_records.jsonl"
+        if not retrieval_path.exists():
+            raise SystemExit(
+                f"Neither {sidecar_path} nor {retrieval_path} exists. "
+                "Run scripts/aic_sidecar.py or enable retrieval artifacts."
+            )
+        sidecar_rows = []
+        for record in _read_jsonl(retrieval_path):
+            selected_turn_ids = list((record.get("meta") or {}).get("selected_turn_ids") or [])
+            sidecar_rows.append(
+                {
+                    "question_id": record["question_id"],
+                    "selected_turn_ids": selected_turn_ids,
+                    "selected_session_ids": sorted(
+                        {turn_id.split("#", 1)[0] for turn_id in selected_turn_ids}
+                    ),
+                }
+            )
+    sidecar = {r["question_id"]: r for r in sidecar_rows}
     judged = {r["question_id"]: r for r in _read_jsonl(eval_path)}
 
     rows: list[dict[str, Any]] = []

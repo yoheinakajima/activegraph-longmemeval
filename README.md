@@ -168,6 +168,35 @@ estimated retrieval cost, profile, and proof completion. `manifest.json`
 aggregates mean/p95 retrieval latency, total estimated retrieval cost, and
 proof-complete rate.
 
+### ActiveGraph Memory result reports
+
+- [`ACTIVEGRAPH_MEMORY_FULL_RUN_REPORT.md`](ACTIVEGRAPH_MEMORY_FULL_RUN_REPORT.md)
+  documents the historical pre-v0.2 `0.878` full run and the failures that
+  motivated typed aggregates, temporal execution, state history, preferences,
+  and a larger context budget.
+- [`ACTIVEGRAPH_MEMORY_V2_REPORT.md`](ACTIVEGRAPH_MEMORY_V2_REPORT.md) documents
+  the complete follow-on experiment sequence, current v2 architecture,
+  speed/cost telemetry, retrieval-hit analysis, the latest `0.824` regression,
+  and implemented work that has not yet been benchmarked.
+
+Latest typed v2 proof run:
+
+```text
+runs/agmem-v2-proof-full-20260710T015130Z__activegraph-memory-pack__s__full
+overall accuracy:       0.824
+task-averaged accuracy: 0.8515
+abstention accuracy:    0.9333
+```
+
+The run used `activegraph-memory` commit `71e6683`, `max_quality`, a
+10,000-token budget, and fielded `text-embedding-3-small` retrieval. It did not
+attach an optional LLM reasoning backend, so the classification, strategy,
+analysis, and packaging stages remained deterministic. Exact gold source turns
+were present for 90.43% of non-abstention questions, but 63 answers were wrong
+despite an exact gold turn being present. The post-run reader contract now
+treats proof completion as structural evidence coverage, not semantic answer
+verification; that correction has not yet been rerun.
+
 Historical pre-v0.2 smoke result for the first compiled-memory adapter:
 
 ```text

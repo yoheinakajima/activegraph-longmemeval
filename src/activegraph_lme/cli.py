@@ -32,9 +32,9 @@ SYSTEM_PROMPT = (
     "conversations between the user and an assistant. Use ONLY the provided "
     "conversation history. If the history does not contain enough information "
     "to answer, say you don't know. The history may begin with a "
-    "[compiled-memory] proof packet. A Verified candidate is a deterministic "
-    "result over its cited evidence rows; use it unless a cited raw source "
-    "contradicts it. A Tentative candidate must be checked. For approximate "
+    "[compiled-memory] proof packet. Proof completion means required evidence "
+    "fields are present; it does not guarantee answer correctness. Check every "
+    "candidate against its cited rows and raw sources. For approximate "
     "relative-time questions, apply the packet's stated tolerance rather than "
     "preferring calendar-day equality. Be concise."
 )
@@ -305,6 +305,7 @@ def run_cmd(
                 "reader_model_resolved": prior.get("reader_model_resolved"),
                 "accumulated_wall_clock_s": prior.get("wall_clock_s", 0.0),
                 "embedding_cache": prior.get("embedding_cache", {}),
+                "system_identity": prior.get("system_identity", {}),
             }
 
     completed_records = _read_query_records(query_records_path) if resume else []
@@ -344,6 +345,7 @@ def run_cmd(
     )
     manifest.reader_model_resolved = str(resume_state.get("reader_model_resolved") or "")
     manifest.embedding_cache = dict(resume_state.get("embedding_cache") or {})
+    manifest.system_identity = dict(resume_state.get("system_identity") or {})
     manifest.queries = list(completed_records)
     manifest.n_truncated = sum(1 for q in manifest.queries if q.truncated)
     if system_name.startswith("activegraph-det-"):
@@ -433,6 +435,23 @@ def run_cmd(
                     )
 
                 context_meta = ctx.meta or {}
+                identity = {
+                    key: context_meta.get(key)
+                    for key in (
+                        "activegraph_memory_version",
+                        "activegraph_memory_content_hash",
+                        "activegraph_memory_git_commit",
+                        "activegraph_memory_git_dirty",
+                    )
+                    if key in context_meta
+                }
+                if identity:
+                    if manifest.system_identity and manifest.system_identity != identity:
+                        raise RuntimeError(
+                            "External system identity changed mid-run "
+                            f"({manifest.system_identity!r} -> {identity!r})."
+                        )
+                    manifest.system_identity = identity
                 pipeline = context_meta.get("pipeline_telemetry") or {}
                 compiled = context_meta.get("compiled_evidence") or {}
                 record = QueryRecord(
@@ -508,6 +527,7 @@ def run_cmd(
                     "partial_manifest_path": str(partial_manifest_path),
                     "retrieval_records_path": str(retrieval_records_path),
                     "embedding_cache": manifest.embedding_cache,
+                    "system_identity": manifest.system_identity,
                 }
                 _atomic_write_json(state_path, state_payload)
                 manifest.write(partial_manifest_path)
@@ -567,6 +587,7 @@ def run_cmd(
             "manifest_path": str(final_manifest_path),
             "retrieval_records_path": str(retrieval_records_path),
             "embedding_cache": manifest.embedding_cache,
+            "system_identity": manifest.system_identity,
         },
     )
     _append_run_event(

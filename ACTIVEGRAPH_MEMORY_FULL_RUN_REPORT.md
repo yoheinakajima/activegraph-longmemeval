@@ -4,7 +4,9 @@
 > `0.878`. The typed projection, profile runtime, graph signal propagation,
 > source-coverage proofs, durable fielded-vector cache, and retrieval artifacts
 > described in the current adapter were implemented afterward. Keep this file
-> as the baseline for the v0.2 comparison.
+> as the baseline for the v0.2 comparison. See
+> `ACTIVEGRAPH_MEMORY_V2_REPORT.md` for the complete follow-on experiment
+> sequence and current pause-point analysis.
 
 Report date: 2026-07-09
 
