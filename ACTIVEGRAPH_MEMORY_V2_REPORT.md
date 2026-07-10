@@ -6,6 +6,9 @@ Benchmark repository: `yoheinakajima/activegraph-longmemeval`
 
 Memory package repository: `yoheinakajima/activegraph-memory`
 
+Status: superseded by `ACTIVEGRAPH_MEMORY_V3_REPORT.md` for the 0.3.0 smoke and
+full-500 results. This file remains the historical v2 pause-point record.
+
 This report is the current pause-point record for the ActiveGraph Memory work.
 It complements `ACTIVEGRAPH_MEMORY_FULL_RUN_REPORT.md`, which remains the
 historical record for the earlier `0.878` run. It does not replace or reinterpret

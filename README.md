@@ -48,10 +48,11 @@ to ~±1 pt.
    pinned embedding model.
 7. `activegraph-memory-pack` — adapter for the external
    [`activegraph-memory`](https://github.com/yoheinakajima/activegraph-memory)
-   pack. The v0.2 adapter compiles canonical entities/events, state histories,
+   pack. The v0.3 adapter compiles canonical entities/events, state histories,
    preferences, quantities, temporal refs, and list positions; runs fielded
-   embeddings plus graph propagation; executes typed query operators; and
-   prepends proof-oriented evidence to source conversation history.
+   embeddings plus graph propagation; executes typed query operators; assesses
+   sufficiency/conflicts; and prepends calibrated proof-oriented evidence to
+   source conversation history.
 
 All systems share the prompt template and reader settings. Token counts
 (authoritative, from API `usage`) are logged for every query. The
@@ -177,9 +178,29 @@ proof-complete rate.
 - [`ACTIVEGRAPH_MEMORY_V2_REPORT.md`](ACTIVEGRAPH_MEMORY_V2_REPORT.md) documents
   the complete follow-on experiment sequence, current v2 architecture,
   speed/cost telemetry, retrieval-hit analysis, the latest `0.824` regression,
-  and implemented work that has not yet been benchmarked.
+  and the changes that motivated v3.
+- [`ACTIVEGRAPH_MEMORY_V3_REPORT.md`](ACTIVEGRAPH_MEMORY_V3_REPORT.md) documents
+  the completed 0.3 architecture, 0.98 smoke, 0.832 full-500 result, retrieval
+  and reader decomposition, proof/sufficiency calibration, operator diagnostics,
+  speed/cost telemetry, and remaining general memory-system gaps.
 
-Latest typed v2 proof run:
+Latest typed v3 run:
+
+```text
+runs/agmem-v3-full-20260710T071914Z__activegraph-memory-pack__s__full
+overall accuracy:       0.832
+task-averaged accuracy: 0.8508
+abstention accuracy:    0.9667
+```
+
+The run used `activegraph-memory` 0.3.0 commit `58f235b`, `max_quality`, a
+10,000-token budget, fielded `text-embedding-3-small` retrieval, adaptive
+sufficiency assessment, and calibrated candidate rendering. Exact gold-turn
+recall was 89.79% on non-abstention questions. The fixed reader still missed 57
+questions despite every exact gold turn being present. Optional LLM reasoning
+was not attached, so reasoning-stage cost remained zero.
+
+Previous typed v2 proof run:
 
 ```text
 runs/agmem-v2-proof-full-20260710T015130Z__activegraph-memory-pack__s__full
@@ -195,7 +216,9 @@ analysis, and packaging stages remained deterministic. Exact gold source turns
 were present for 90.43% of non-abstention questions, but 63 answers were wrong
 despite an exact gold turn being present. The post-run reader contract now
 treats proof completion as structural evidence coverage, not semantic answer
-verification; that correction has not yet been rerun.
+verification. The v3 run above measures that correction and reduces these
+reader-with-exact-evidence failures from 63 to 57, while exact-turn recall falls
+slightly from 90.43% to 89.79%.
 
 Historical pre-v0.2 smoke result for the first compiled-memory adapter:
 
