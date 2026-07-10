@@ -357,6 +357,9 @@ def _activegraph_memory_pack_contract(cfg) -> tuple[str, str]:
     confidence_ok = "coverage" in confidence and "extraction" in confidence
     compiled_ok = (
         meta.get("memory_runtime") == "activegraph_memory.profile_runtime_v2"
+        and bool(meta.get("activegraph_memory_version"))
+        and str(meta.get("activegraph_memory_content_hash", "")).startswith("sha256:")
+        and len(str(meta.get("activegraph_memory_git_commit", ""))) == 40
         and bool(meta.get("selected_turn_ids"))
         and bool(meta.get("selected_claim_ids"))
         and bool(meta.get("pipeline_telemetry"))

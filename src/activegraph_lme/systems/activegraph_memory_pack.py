@@ -19,7 +19,9 @@ import hashlib
 import importlib
 import json
 import os
+import subprocess
 import sys
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -60,6 +62,41 @@ def activegraph_memory_available() -> tuple[bool, str]:
     except Exception as exc:  # noqa: BLE001
         return False, str(exc)
     return True, ""
+
+
+def _activegraph_memory_identity() -> dict[str, Any]:
+    constants = _load_activegraph_memory_module("activegraph_memory.constants")
+    package_dir = Path(constants.__file__).resolve().parent
+    manifest_path = package_dir / "manifest.toml"
+    manifest = tomllib.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    repo_root = package_dir.parent
+    commit = "unknown"
+    dirty: bool | None = None
+    try:
+        commit_result = subprocess.run(
+            ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        status_result = subprocess.run(
+            ["git", "-C", str(repo_root), "status", "--porcelain", "--untracked-files=no"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        commit = commit_result.stdout.strip()
+        dirty = bool(status_result.stdout.strip())
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return {
+        "activegraph_memory_version": constants.PACK_VERSION,
+        "activegraph_memory_content_hash": manifest.get("pack", {}).get("integrity", {}).get("content_hash"),
+        "activegraph_memory_git_commit": commit,
+        "activegraph_memory_git_dirty": dirty,
+    }
 
 
 @dataclass
@@ -106,6 +143,7 @@ class ActiveGraphMemoryPackSystem:
         self._embedder: EmbeddingClient | None = None
         self._memory_vector_store: Any = None
         self._memory_vector_store_initialized = False
+        self._memory_identity = _activegraph_memory_identity()
 
     def _get_embedder(self) -> EmbeddingClient:
         if self._embedder is None:
@@ -155,6 +193,7 @@ class ActiveGraphMemoryPackSystem:
         meta = {
             **graph_state.stats(),
             **cache_stats,
+            **self._memory_identity,
             "n_memory_claims": len(memory_index.claims),
             "n_memory_turns": len(memory_index.turns),
             "memory_runtime": "activegraph_memory.profile_runtime_v2",
