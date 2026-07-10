@@ -86,6 +86,9 @@ class ActiveGraphMemoryPackSystem:
         embedding_model: str = "text-embedding-3-small",
         extraction_cache_dir: str | Path | None = None,
         extract_seed: str = "A-v2",
+        memory_profile: str = "balanced",
+        memory_embedding_cache: str = ".embedding_cache/activegraph-memory-v2.sqlite3",
+        embedding_cost_per_million_tokens: float = 0.0,
     ) -> None:
         self.token_budget = token_budget
         self.min_token_length = min_token_length
@@ -93,16 +96,33 @@ class ActiveGraphMemoryPackSystem:
         self.max_doc_freq_fraction = max_doc_freq_fraction
         self.embedding_model = embedding_model
         self.extract_seed = extract_seed
+        self.memory_profile = memory_profile
+        self.memory_embedding_cache = memory_embedding_cache
+        self.embedding_cost_per_million_tokens = embedding_cost_per_million_tokens
         self.extraction_cache_dir = Path(extraction_cache_dir or "data/sem_extract_cache")
         self._extract_cache = _load_extract_cache(
             self.extraction_cache_dir / f"seed-{extract_seed}.jsonl"
         )
         self._embedder: EmbeddingClient | None = None
+        self._memory_vector_store: Any = None
+        self._memory_vector_store_initialized = False
 
     def _get_embedder(self) -> EmbeddingClient:
         if self._embedder is None:
             self._embedder = EmbeddingClient(model=self.embedding_model)
         return self._embedder
+
+    def _get_memory_vector_store(self):
+        if self._memory_vector_store_initialized:
+            return self._memory_vector_store
+        self._memory_vector_store_initialized = True
+        if self.memory_embedding_cache.lower() == "off":
+            return None
+        store_mod = _load_activegraph_memory_module("activegraph_memory.embedding_store")
+        self._memory_vector_store = store_mod.SQLiteEmbeddingStore(
+            self.memory_embedding_cache
+        )
+        return self._memory_vector_store
 
     def ingest(self, instance: LMEInstance) -> _State:
         compiler = _load_activegraph_memory_module("activegraph_memory.compiler")
@@ -137,7 +157,10 @@ class ActiveGraphMemoryPackSystem:
             **cache_stats,
             "n_memory_claims": len(memory_index.claims),
             "n_memory_turns": len(memory_index.turns),
-            "memory_runtime": "activegraph_memory.compiler_retrieval_v1",
+            "memory_runtime": "activegraph_memory.profile_runtime_v2",
+            "memory_profile": self.memory_profile,
+            "memory_embedding_cache": self.memory_embedding_cache,
+            "embedding_cost_per_million_tokens": self.embedding_cost_per_million_tokens,
             "embedding_model": self.embedding_model,
             "extract_seed": self.extract_seed,
             "extraction_cache_path": str(
@@ -157,7 +180,6 @@ class ActiveGraphMemoryPackSystem:
     ) -> AssembledContext:
         gateway_mod = _load_activegraph_memory_module("activegraph_memory.gateway")
         object_types = _load_activegraph_memory_module("activegraph_memory.object_types")
-        retrieval_mod = _load_activegraph_memory_module("activegraph_memory.retrieval")
 
         query_id = _query_id(state.question_id, question, question_date)
         memory_query = object_types.MemoryQuery(
@@ -170,18 +192,32 @@ class ActiveGraphMemoryPackSystem:
                 "question_type": state.question_type,
             },
         )
-        claim_scores, turn_scores, score_meta = self._score_index(
-            state.memory_index, question
+        profiles_mod = _load_activegraph_memory_module("activegraph_memory.profiles")
+        runtime_mod = _load_activegraph_memory_module("activegraph_memory.runtime")
+        profile = profiles_mod.runtime_profile(self.memory_profile).model_copy(
+            update={"token_budget": self.token_budget}
         )
-        result = retrieval_mod.retrieve_memory(
+        embedding_provider = None
+        if os.environ.get("OPENAI_API_KEY"):
+            embedding_provider = _HarnessEmbeddingProvider(
+                self._get_embedder(),
+                self.embedding_model,
+            )
+        memory_runtime = runtime_mod.MemoryRuntime(
+            profile,
+            embedding_provider=embedding_provider,
+            embedding_model=self.embedding_model,
+            embedding_cost_per_million_tokens=self.embedding_cost_per_million_tokens,
+            embedding_store=(
+                self._get_memory_vector_store() if embedding_provider is not None else None
+            ),
+            token_counter=count_tokens,
+        )
+        result = memory_runtime.retrieve(
             state.memory_index,
             memory_query,
             query_id=query_id,
             question_date=question_date,
-            token_budget=self.token_budget,
-            claim_scores=claim_scores,
-            turn_scores=turn_scores,
-            token_counter=count_tokens,
         )
         gateway_request = gateway_mod.build_memory_retrieval_request(
             memory_query,
@@ -191,7 +227,11 @@ class ActiveGraphMemoryPackSystem:
 
         meta = {
             **state.meta,
-            **score_meta,
+            "retrieval_signal": (
+                "compiled-memory-v2+fielded-embedding"
+                if embedding_provider is not None
+                else "compiled-memory-v2+lexical"
+            ),
             "system": self.name,
             "query_type": result.metadata.get("query_type"),
             "retrieval_plan": result.retrieval_plan.model_dump(),
@@ -204,42 +244,20 @@ class ActiveGraphMemoryPackSystem:
             "selected_unit_ids": list(result.metadata.get("selected_unit_ids", [])),
             "gateway_request": gateway_request,
             "memory_retrieval_metadata": result.metadata,
+            "pipeline_telemetry": result.metadata.get("pipeline_telemetry", {}),
+            "compiled_evidence": result.metadata.get("compiled_evidence", {}),
+            "query_analysis": result.metadata.get("query_analysis", {}),
+            "memory_vector_store": (
+                self._memory_vector_store.stats()
+                if self._memory_vector_store is not None
+                else {}
+            ),
         }
         return AssembledContext(
             text=result.context_text,
             truncated=result.truncated,
             meta=meta,
         )
-
-    def _score_index(self, memory_index: Any, question: str) -> tuple[dict[str, float], dict[str, float], dict[str, Any]]:
-        if not os.environ.get("OPENAI_API_KEY"):
-            return {}, {}, {"retrieval_signal": "lexical-pack-fallback"}
-
-        embedder = self._get_embedder()
-        claims = list(memory_index.claims)
-        turns = list(memory_index.turns)
-        q_vec = embedder.embed([question])[0]
-        claim_scores: dict[str, float] = {}
-        turn_scores: dict[str, float] = {}
-
-        if claims:
-            claim_vecs = embedder.embed([record.text for record in claims])
-            raw = claim_vecs @ q_vec
-            claim_scores = {
-                record.claim_id: float(raw[i]) for i, record in enumerate(claims)
-            }
-        if turns:
-            turn_vecs = embedder.embed([turn.text for turn in turns])
-            raw = turn_vecs @ q_vec
-            turn_scores = {
-                turn.turn_id: float(raw[i]) for i, turn in enumerate(turns)
-            }
-        return claim_scores, turn_scores, {
-            "retrieval_signal": "compiled-memory+embedding",
-            "n_claim_scores": len(claim_scores),
-            "n_turn_scores": len(turn_scores),
-        }
-
 
 def _load_extract_cache(path: Path) -> dict[tuple[str, str, str], list[dict[str, Any]]]:
     out: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
@@ -257,6 +275,19 @@ def _load_extract_cache(path: Path) -> dict[tuple[str, str, str], list[dict[str,
             facts = list((obj.get("parsed") or {}).get("facts") or [])
             out[(sid, csum, role)] = facts
     return out
+
+
+class _HarnessEmbeddingProvider:
+    """Adapt the harness cache-aware embedder to ActiveGraph's provider seam."""
+
+    def __init__(self, embedder: EmbeddingClient, model: str) -> None:
+        self.embedder = embedder
+        self.default_model = model
+
+    def embed(self, *, texts: list[str], model: str) -> list[list[float]]:
+        if model != self.default_model:
+            raise ValueError(f"Harness embedder is pinned to {self.default_model!r}, got {model!r}")
+        return self.embedder.embed(texts).tolist()
 
 
 def _source_turns(turns: list[Turn]) -> list[Any]:
@@ -358,4 +389,3 @@ def _query_id(question_id: str, question: str, question_date: str) -> str:
         f"{question_id}\n{question_date}\n{question}".encode("utf-8")
     ).hexdigest()[:16]
     return f"lme:{question_id}:{digest}"
-

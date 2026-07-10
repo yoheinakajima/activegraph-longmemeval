@@ -47,6 +47,10 @@ class ActiveGraphCfg(BaseModel):
     min_token_length: int = 4
     min_session_cooccurrence: int = 2
     max_doc_freq_fraction: float = 0.5
+    memory_profile: Literal["fast", "balanced", "quality", "max_quality"] = "balanced"
+    save_retrieval_artifacts: bool = True
+    memory_embedding_cache: str = ".embedding_cache/activegraph-memory-v2.sqlite3"
+    embedding_cost_per_million_tokens: float = Field(default=0.0, ge=0.0)
 
 
 class RunCfg(BaseModel):

@@ -29,6 +29,10 @@ class QueryRecord:
     completion_tokens: int    # authoritative count from reader API
     truncated: bool = False   # True iff context was truncated to fit a budget
     elapsed_s: float = 0.0
+    retrieval_latency_ms: float = 0.0
+    retrieval_cost_usd: float = 0.0
+    runtime_profile: str = ""
+    proof_complete: bool | None = None
 
 
 @dataclass
@@ -84,10 +88,36 @@ class Manifest:
             "context_token_source": self.context_token_source,
             "require_authoritative_tokens": self.require_authoritative_tokens,
             "embedding_cache": self.embedding_cache,
+            "retrieval_summary": self._retrieval_summary(),
             "queries": [q.__dict__ for q in self.queries],
             "notes": self.notes,
         }
         return d
+
+    def _retrieval_summary(self) -> dict[str, Any]:
+        measured = [query for query in self.queries if query.retrieval_latency_ms > 0]
+        if not measured:
+            return {}
+        latencies = sorted(query.retrieval_latency_ms for query in measured)
+        p95_index = round((len(latencies) - 1) * 0.95)
+        proof_values = [query.proof_complete for query in measured if query.proof_complete is not None]
+        return {
+            "n_measured": len(measured),
+            "latency_mean_ms": round(sum(latencies) / len(latencies), 3),
+            "latency_p95_ms": round(latencies[p95_index], 3),
+            "retrieval_cost_usd": round(
+                sum(query.retrieval_cost_usd for query in measured),
+                8,
+            ),
+            "proof_complete_rate": (
+                round(sum(bool(value) for value in proof_values) / len(proof_values), 4)
+                if proof_values
+                else None
+            ),
+            "runtime_profiles": sorted(
+                {query.runtime_profile for query in measured if query.runtime_profile}
+            ),
+        }
 
     def write(self, path: str | Path) -> None:
         Path(path).write_text(json.dumps(self.to_dict(), indent=2))

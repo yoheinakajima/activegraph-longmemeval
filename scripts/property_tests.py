@@ -356,9 +356,11 @@ def _activegraph_memory_pack_contract(cfg) -> tuple[str, str]:
     gateway_ok = gateway.get("metadata", {}).get("query_id") == plan.get("query_id")
     confidence_ok = "coverage" in confidence and "extraction" in confidence
     compiled_ok = (
-        meta.get("memory_runtime") == "activegraph_memory.compiler_retrieval_v1"
+        meta.get("memory_runtime") == "activegraph_memory.profile_runtime_v2"
         and bool(meta.get("selected_turn_ids"))
         and bool(meta.get("selected_claim_ids"))
+        and bool(meta.get("pipeline_telemetry"))
+        and bool(meta.get("query_analysis"))
     )
 
     ok = all([context_ok, plan_ok, coverage_ok, evidence_ok, gateway_ok, confidence_ok, compiled_ok])

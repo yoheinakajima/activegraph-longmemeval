@@ -153,9 +153,18 @@ def _repair_hypotheses_for_resume(
 
 def _embedding_cache_manifest(system: Any) -> dict[str, Any]:
     embedder = getattr(system, "_embedder", None)
-    if embedder is None or not hasattr(embedder, "cache_stats"):
-        return {}
-    return embedder.cache_stats()
+    output = (
+        embedder.cache_stats()
+        if embedder is not None and hasattr(embedder, "cache_stats")
+        else {}
+    )
+    vector_store = getattr(system, "_memory_vector_store", None)
+    if vector_store is not None and hasattr(vector_store, "stats"):
+        output["activegraph_memory_vector_store"] = vector_store.stats()
+        output["activegraph_memory_vector_store_path"] = str(
+            getattr(system, "memory_embedding_cache", "")
+        )
+    return output
 
 
 @click.group()
@@ -258,12 +267,15 @@ def run_cmd(
     run_dir.mkdir(parents=True, exist_ok=True)
     hyp_path = run_dir / "hypotheses.jsonl"
     query_records_path = run_dir / "query_records.jsonl"
+    retrieval_records_path = run_dir / "retrieval_records.jsonl"
     event_path = run_dir / "run_events.jsonl"
     state_path = run_dir / "run_state.json"
     partial_manifest_path = run_dir / "manifest.partial.json"
     final_manifest_path = run_dir / "manifest.json"
 
     artifacts = [hyp_path, query_records_path, final_manifest_path, partial_manifest_path]
+    if cfg.activegraph.save_retrieval_artifacts:
+        artifacts.append(retrieval_records_path)
     if not resume and any(p.exists() for p in artifacts):
         raise click.ClickException(
             f"Run directory already contains artifacts: {run_dir}. "
@@ -371,7 +383,11 @@ def run_cmd(
     try:
         with open(hyp_path, "a" if resume else "w", encoding="utf-8") as hyp_f, open(
             query_records_path, "a" if resume else "w", encoding="utf-8"
-        ) as qrec_f:
+        ) as qrec_f, open(
+            retrieval_records_path if cfg.activegraph.save_retrieval_artifacts else os.devnull,
+            "a" if resume else "w",
+            encoding="utf-8",
+        ) as retrieval_f:
             for idx, inst in enumerate(
                 tqdm(remaining, desc=f"{system_name}:{dataset_key}")
             ):
@@ -411,6 +427,9 @@ def run_cmd(
                         f"refusing to record run with ambiguous provenance."
                     )
 
+                context_meta = ctx.meta or {}
+                pipeline = context_meta.get("pipeline_telemetry") or {}
+                compiled = context_meta.get("compiled_evidence") or {}
                 record = QueryRecord(
                     question_id=inst.question_id,
                     question_type=inst.question_type,
@@ -419,6 +438,12 @@ def run_cmd(
                     completion_tokens=out.completion_tokens,
                     truncated=ctx.truncated,
                     elapsed_s=round(time.monotonic() - t_inst, 4),
+                    retrieval_latency_ms=float(pipeline.get("duration_ms") or 0.0),
+                    retrieval_cost_usd=float(pipeline.get("cost_usd") or 0.0),
+                    runtime_profile=str(context_meta.get("memory_profile") or ""),
+                    proof_complete=(
+                        bool(compiled.get("proof_complete")) if compiled else None
+                    ),
                 )
                 hyp_f.write(
                     json.dumps(
@@ -433,6 +458,27 @@ def run_cmd(
                 qrec_f.write(json.dumps(record.__dict__, ensure_ascii=False) + "\n")
                 qrec_f.flush()
                 os.fsync(qrec_f.fileno())
+
+                if cfg.activegraph.save_retrieval_artifacts:
+                    retrieval_f.write(
+                        json.dumps(
+                            {
+                                "question_id": inst.question_id,
+                                "question_type": inst.question_type,
+                                "question": inst.question,
+                                "question_date": inst.question_date,
+                                "context_text": ctx.text,
+                                "context_tokens": record.context_tokens,
+                                "truncated": ctx.truncated,
+                                "meta": context_meta,
+                            },
+                            ensure_ascii=False,
+                            default=str,
+                        )
+                        + "\n"
+                    )
+                    retrieval_f.flush()
+                    os.fsync(retrieval_f.fileno())
 
                 manifest.queries.append(record)
                 if ctx.truncated:
@@ -455,6 +501,7 @@ def run_cmd(
                     "query_records_path": str(query_records_path),
                     "hypotheses_path": str(hyp_path),
                     "partial_manifest_path": str(partial_manifest_path),
+                    "retrieval_records_path": str(retrieval_records_path),
                     "embedding_cache": manifest.embedding_cache,
                 }
                 _atomic_write_json(state_path, state_payload)
@@ -513,6 +560,7 @@ def run_cmd(
             "query_records_path": str(query_records_path),
             "hypotheses_path": str(hyp_path),
             "manifest_path": str(final_manifest_path),
+            "retrieval_records_path": str(retrieval_records_path),
             "embedding_cache": manifest.embedding_cache,
         },
     )

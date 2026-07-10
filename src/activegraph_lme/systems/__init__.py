@@ -46,6 +46,9 @@ def build_system(name: str, cfg, *, extract_seed: str = "A-v2") -> System:
             max_doc_freq_fraction=cfg.activegraph.max_doc_freq_fraction,
             embedding_model=cfg.embeddings.model,
             extract_seed=extract_seed,
+            memory_profile=cfg.activegraph.memory_profile,
+            memory_embedding_cache=cfg.activegraph.memory_embedding_cache,
+            embedding_cost_per_million_tokens=cfg.activegraph.embedding_cost_per_million_tokens,
         )
     if name == "activegraph-sem-extract":
         return ActiveGraphSemExtractSystem(

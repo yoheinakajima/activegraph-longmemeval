@@ -48,11 +48,10 @@ to ~±1 pt.
    pinned embedding model.
 7. `activegraph-memory-pack` — adapter for the external
    [`activegraph-memory`](https://github.com/yoheinakajima/activegraph-memory)
-   pack. In v0.1 it keeps the reader context as conversation history only,
-   while recording the pack's deterministic `memory_query -> retrieval_plan`,
-   coverage report, confidence vector, and `memory_gateway` request shape in
-   run metadata. Treat this as the Phase 1 integration/instrumentation cell,
-   not a semantic-memory improvement claim yet.
+   pack. The v0.2 adapter compiles canonical entities/events, state histories,
+   preferences, quantities, temporal refs, and list positions; runs fielded
+   embeddings plus graph propagation; executes typed query operators; and
+   prepends proof-oriented evidence to source conversation history.
 
 All systems share the prompt template and reader settings. Token counts
 (authoritative, from API `usage`) are logged for every query. The
@@ -101,8 +100,8 @@ make run SYSTEM=rag-bm25 DATA=s            # writes runs/<run_id>/
 make eval RUN=runs/<run_id>                # invokes the frozen upstream judge
 
 # offline property tests for baselines, ActiveGraph Mode A, and the
-# activegraph-memory-pack Phase 1 adapter when the package is installed
-# (no API required; embedding sub-variant skips without OPENAI_API_KEY).
+# activegraph-memory-pack adapter when the package is installed
+# (no API required; embedding paths skip without OPENAI_API_KEY).
 make tests
 
 # probe the resolved reader model snapshot (one-shot, needs ANTHROPIC_API_KEY)
@@ -146,7 +145,8 @@ make reproduce
 python3.11 -m activegraph_lme.cli run \
   --system activegraph-memory-pack \
   --dataset s \
-  --run-id agmem-fullarch-full-YYYYMMDDTHHMMSSZ \
+  --config config/run.activegraph-memory-v2.yaml \
+  --run-id agmem-v2-full-YYYYMMDDTHHMMSSZ \
   --resume \
   --require-authoritative-tokens
 ```
@@ -154,11 +154,21 @@ python3.11 -m activegraph_lme.cli run \
 The current pack adapter compiles role-aware extracted claims from
 `data/sem_extract_cache/seed-A-v2.jsonl` into the external
 `activegraph-memory` runtime, then retrieves evidence bundles that render
-memory-claim headers directly above their source turns. If the extraction
-cache is missing, offline tests fall back to deterministic turn-derived
-claims rather than calling an extractor.
+memory-claim headers directly above their source turns. The v2 config selects
+the `max_quality` profile with a 10,000-token context budget, three targeted
+retrieval rounds, entity/event embeddings, and persistent compiled-vector
+caching. Optional LLM reasoning is not attached in this benchmark cell, so the
+profile remains deterministic. If the extraction cache is missing, offline
+tests fall back to deterministic turn-derived claims rather than calling an
+extractor.
 
-Latest smoke result for the full compiled-memory adapter:
+Every completed query writes exact retrieval context and metadata to
+`retrieval_records.jsonl`. `query_records.jsonl` includes retrieval latency,
+estimated retrieval cost, profile, and proof completion. `manifest.json`
+aggregates mean/p95 retrieval latency, total estimated retrieval cost, and
+proof-complete rate.
+
+Historical pre-v0.2 smoke result for the first compiled-memory adapter:
 
 ```text
 runs/agmem-fullarch2-smoke-20260709T014835Z__activegraph-memory-pack__s__smoke
@@ -178,7 +188,7 @@ temporal-reasoning         0.8571
 knowledge-update           1.0000
 ```
 
-Latest full-500 result:
+Historical pre-v0.2 full-500 result:
 
 ```text
 runs/agmem-fullarch-full-20260709T022124Z__activegraph-memory-pack__s__full
@@ -218,6 +228,9 @@ Full cells now write enough state to be resumed safely:
   and reruns do not re-pay already computed embedding calls. Set
   `AGLME_EMBEDDING_CACHE=/path/to/embeddings.sqlite3` to share the cache
   across checkouts, or `AGLME_EMBEDDING_CACHE=off` to disable it.
+- `.embedding_cache/activegraph-memory-v2.sqlite3` stores fielded compiled
+  vectors using the pack's model/field/subject/text-hash key. This cache makes
+  interrupted v0.2 runs restart without re-embedding unchanged corpus rows.
 
 ## Reproducibility hooks
 
@@ -228,11 +241,14 @@ Full cells now write enough state to be resumed safely:
 - Per-run `manifest.json` captures: repo SHA, submodule SHA, dataset SHA-256,
   reader model **requested + resolved**, judge short name + resolved model, full
   config, seed, started/finished timestamps, wall-clock, per-question
-  `{prompt_tokens, completion_tokens, context_tokens, truncated, elapsed_s}`,
+  `{prompt_tokens, completion_tokens, context_tokens, truncated, elapsed_s,
+  retrieval_latency_ms, retrieval_cost_usd, runtime_profile, proof_complete}`,
   run-level `context_token_source` in {`tiktoken`, `charfallback`}, and
   embedding-cache statistics when a system uses embeddings.
 - Per-run `query_records.jsonl`, `run_events.jsonl`, and `run_state.json`
   make API-backed cells resumable with `--resume`.
+- Per-run `retrieval_records.jsonl` preserves the exact reader context, query
+  IR, compiled proof, selected IDs, and stage telemetry for miss analysis.
 - tiktoken downloads its BPE on first use into the project-local
   `.tiktoken_cache/` (set automatically). Network access is required ONCE;
   after that all runs (including subprocess children) are offline-friendly.
@@ -296,17 +312,18 @@ The adapter currently:
 
 - builds the existing deterministic ActiveGraph lexical state;
 - creates an `activegraph_memory.object_types.MemoryQuery`;
-- calls `activegraph_memory.planner.plan_query`;
 - compiles role-aware memory claims from the frozen extraction cache or a
   deterministic turn-derived fallback;
-- retrieves a memory evidence bundle with the external pack's compiled
-  runtime;
+- runs the selected `MemoryRuntimeProfile` through query analysis, fielded
+  lexical/embedding retrieval, graph signal propagation, typed execution, and
+  provenance-preserving packaging;
+- persists compiled corpus vectors through `SQLiteEmbeddingStore`;
 - records the `retrieval_plan`, `coverage_report`, confidence vector,
-  evidence bundle, selected turn/claim ids, and gateway-compatible
-  retrieval request in `AssembledContext.meta`;
-- renders memory-claim headers directly above the source conversation
-  turns passed to the fixed reader.
+  evidence bundle, compiled proof, query IR, per-stage telemetry, selected
+  turn/claim/event ids, and gateway-compatible retrieval request;
+- renders the compiled proof packet before source conversation turns passed to
+  the fixed reader.
 
-This keeps the published evaluation boundary clean while giving the new
-pack a stable LongMemEval integration point for future semantic-memory
-behavior.
+This keeps the published evaluation boundary clean: the fixed reader and judge
+do not change, while retrieval semantics, context size, stage usage, and cost
+remain explicit in config and run artifacts.
